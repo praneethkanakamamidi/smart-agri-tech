@@ -1,0 +1,51 @@
+version: '3.8'
+services:
+  smart-agri-tech-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smart-agri-tech-backend
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    restart: always
+    env_file:
+      - ./.env
+    volumes:
+      - ".:/smart-agri-tech-backend"
+    networks:
+      - smart-agri-tech-net
+    depends_on:
+      - smart-agri-tech-postgres
+
+  smart-agri-tech-postgres:
+    image: postgres:latest
+    container_name: smart-agri-tech-postgres
+    ports:
+      - "${POSTGRES_DB_EXTERNAL_PORT}:${POSTGRES_DB_INTERNAL_PORT}"
+    restart: always
+    env_file:
+      - ./.env
+    volumes:
+      - smart-agri-tech-db:/var/lib/postgresql/data
+    networks:
+      - smart-agri-tech-net
+
+  smart-agri-tech-pgadmin:
+    container_name: smart-agri-tech-pgadmin
+    image: dpage/pgadmin4
+    restart: always
+    env_file:
+      - ./.env
+    ports:
+      - "${PGADMIN_PORT}:80"
+    networks:
+      - smart-agri-tech-net
+    depends_on:
+      - smart-agri-tech-postgres
+
+volumes:
+  smart-agri-tech-db:
+
+networks:
+  smart-agri-tech-net:
+    driver: bridge
