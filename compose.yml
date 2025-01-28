@@ -11,11 +11,15 @@ services:
     env_file:
       - ./.env
     volumes:
-      - ".:/smart-agri-tech-backend"
+      - './:/smart-agri-tech'
     networks:
       - smart-agri-tech-net
     depends_on:
       - smart-agri-tech-postgres
+    environment:
+      - WATCHFILES_FORCE_POLLING=true
+    links:
+      - "smart-agri-tech-postgres"
 
   smart-agri-tech-postgres:
     image: postgres:latest
