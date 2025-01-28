@@ -38,4 +38,4 @@ EXPOSE ${BACKEND_PORT}
 ENTRYPOINT ["/smart-agri-tech/entrypoint.sh"]
 
 # Set the default command to run Uvicorn with FastAPI app
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port $BACKEND_PORT"]
+CMD ["sh", "-c", "uvicorn main:smart_agri_tech_app --host 0.0.0.0 --port $BACKEND_PORT --reload"]
