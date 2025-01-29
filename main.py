@@ -2,12 +2,15 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 import os
+from src.helpers.logging_config import get_logger
 
 from src.routers.miscellaneous_data_router import router as misc_data_router
 
 HOST = "0.0.0.0"
 PORT = os.getenv("BACKEND_PORT")
 ALLOW_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+logger = get_logger(__name__)
+logger.info("Logger loaded")
 
 smart_agri_tech_app = FastAPI(
     title="Smart-Agri-Tech API",
