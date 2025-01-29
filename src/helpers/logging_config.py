@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 class JSONFormatter(logging.Formatter):
     """Custom JSON formatter for structured logging.
@@ -52,5 +53,11 @@ def get_logger(name):
         handler = logging.StreamHandler()  # Log to the console (stdout)
         handler.setFormatter(JSONFormatter())  # Set the custom JSON formatter
         logger.addHandler(handler)  # Add the handler to the logger
-    
+        log_dir = 'logs'
+        if not os.path.exists(log_dir):  # Ensure the 'logs' directory exists
+            os.makedirs(log_dir)  # Create the directory if it doesn't exist
+        file_handler = logging.FileHandler(os.path.join(log_dir, 'app.log'))
+        file_handler.setFormatter(JSONFormatter())  # Set the custom JSON formatter
+        logger.addHandler(file_handler)  # Add the file handler to the logger
+
     return logger  # Return the configured logger
