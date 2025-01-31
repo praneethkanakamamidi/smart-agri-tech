@@ -5,37 +5,31 @@ from sqlalchemy.orm import sessionmaker
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional, Union, Any
-from app.model.users import Users
+from src.data_models.users_model import Users
 from fastapi import APIRouter, Depends
 from src.security_utils.hashing_config import Hashing
+from src.helpers.settings_config import OAuthSettings
 import secrets
 import os
 
 hashing = Hashing()
+oauth_settings = OAuthSettings() 
 
-access_token_secret_key  = os.getenv("ACCESS_TOKEN_SECRET_KEY ")
-refresh_token_secret_key  = os.getenv("REFRESH_TOKEN_SECRET_KEY ")
-algorithm  = os.getenv("ALGORITHM")
-access_expiry  = 30
-refresh_expiry = 60 * 24 * 7
+class OAuth2Handler:
+    def __init__(self):
+        self.access_token_secret_key = oauth_settings.access_token_secret_key
+        self.refresh_token_secret_key = oauth_settings.refresh_token_secret_key
+        self.algorithm = oauth_settings.algorithm
+        self.access_expiry = timedelta(minutes=oauth_settings.access_expiry)
+        self.refresh_expiry = timedelta(minutes=oauth_settings.refresh_expiry)
 
-def generate_access_token(data: dict, expiry_duration : timedelta = None):
-    token_data  = data.copy()
-    if expiry_duration :
-        expiration_time  = datetime.utcnow() + expiry_duration 
-    else:
-        expiration_time  = datetime.utcnow() + timedelta(access_expiry)
-    token_data .update({"exp": expiration_time })
-    encoded_token  = jwt.encode(token_data , access_token_secret_key, algorithm=algorithm)
-    return encoded_token 
+    def generate_access_token(self, data: dict, expiry_duration: timedelta = None) -> str:
+        token_data = data.copy()
+        expiration_time = datetime.utcnow() + (expiry_duration if expiry_duration else self.access_expiry)
+        token_data.update({"exp": expiration_time})
+        return jwt.encode(token_data, self.access_token_secret_key, algorithm=self.algorithm)
 
-def generate_refresh_token(data: dict, expiry_duration : timedelta = None):
-    token_data  = data.copy()
-    if expiry_duration :
-        expiration_time  = datetime.utcnow() + expiry_duration 
-    else:
-        expiration_time  = datetime.utcnow() + timedelta(refresh_token_secret_key)
-    token_data .update({"exp": expiration_time })
-    encoded_token  = jwt.encode(token_data , refresh_expiry, algorithm=algorithm)
-    return encoded_token 
-
+    def generate_refresh_token(self, data: dict, expiry_duration: timedelta = None) -> str:
+        token_data = data.copy()
+        expiration_time = datetime.utcnow() + (expiry_duration if expiry_duration else self.refresh_expiry)
+        return jwt.encode(token_data, self.refresh_token_secret_key, algorithm=self.algorithm)
