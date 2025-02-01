@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
 from jose import jwt
 from datetime import timedelta, datetime
@@ -6,9 +6,13 @@ from src.data_models.users_model import Users
 from src.data_models.miscellaneous_model import Miscellaneous_Data
 from src.security_utils.hashing_config import Hashing
 from src.helpers.settings_config import OAuthSettings
+from fastapi.security import OAuth2PasswordBearer
+from src.db_connections.postgresql_conn import get_db
 
 hashing = Hashing()
 oauth_settings = OAuthSettings()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 
 class LoginService:
     def __init__(self):
@@ -87,6 +91,42 @@ class LoginService:
                 raise credentials_exception
 
             return user
+        except jwt.ExpiredSignatureError:  # Handle expired token
+            raise HTTPException(
+                status_code=401,
+                detail="Token has expired",
+            )
+
+    def get_current_active_user(
+        token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+    ):
+        """Authenticate and get the active user based on the provided JWT token."""
+        credentials_exception = HTTPException(
+            status_code=401,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+        try:
+            payload = jwt.decode(token, oauth_settings.ACCESS_TOKEN, algorithms=[oauth_settings.ALGORITHM])
+            user_name: str = payload.get("sub")
+
+            if datetime.fromtimestamp(payload['exp']) < datetime.now():
+                raise HTTPException(
+                    status_code=401,
+                    detail="Token expired",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            
+            if user_name is None:
+                raise credentials_exception
+
+            user = db.query(Users).filter(Users.user_name == user_name).first()
+            if user is None:
+                raise credentials_exception
+
+            return user
+
         except jwt.ExpiredSignatureError:  # Handle expired token
             raise HTTPException(
                 status_code=401,
