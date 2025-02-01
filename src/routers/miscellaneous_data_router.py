@@ -4,7 +4,6 @@ from src.services.miscellaneous_service import MiscellaneousDataService
 from src.db_connections.postgresql_conn import get_db
 from src.services.login_service import LoginService
 from src.data_models.users_model import Users
-from fastapi.security import OAuth2PasswordBearer
 
 router = APIRouter(prefix="/api")
 
@@ -18,7 +17,7 @@ def get_miscellaneous_data(
     id: int, 
     db: Session = Depends(get_db), 
     service: MiscellaneousDataService = Depends(get_miscellaneous_data_service),
-    user: Users = Depends(get_current_active_user)
+    # user: Users = Depends(get_current_active_user)
 ):
     response = service.get_miscellaneous_data(id, db)
     return response
