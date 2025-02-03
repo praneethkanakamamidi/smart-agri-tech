@@ -18,7 +18,7 @@ class Hashing:
         :return: True if the password matches, False otherwise.
         """
         if not input_password or not hashed_password:
-            raise ValueError("Input password or hashed password cannot be empty.")
+            raise ValueError("Input password or hashed password cannot be empty")
         
         return self.crypt_context.verify(input_password, hashed_password)
 
@@ -29,6 +29,6 @@ class Hashing:
         :return: The hashed password.
         """
         if not input_password:
-            raise ValueError("Input password cannot be empty.")        
+            raise ValueError("Input password cannot be empty")        
         return self.crypt_context.hash(input_password)
 
