@@ -28,7 +28,7 @@ def get_user(
     id: int,
     db: Session = Depends(get_db),
     users_service: UsersService = Depends(get_users_service),
-    # user: Users = Depends(get_current_active_user)
+    user: Users = Depends(get_current_active_user)
 ):
     response = users_service.get_user(id, db) 
     return response

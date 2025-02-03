@@ -17,7 +17,7 @@ def get_miscellaneous_data(
     id: int, 
     db: Session = Depends(get_db), 
     service: MiscellaneousDataService = Depends(get_miscellaneous_data_service),
-    # user: Users = Depends(get_current_active_user)
+    user: Users = Depends(get_current_active_user)
 ):
     response = service.get_miscellaneous_data(id, db)
     return response
