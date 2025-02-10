@@ -7,6 +7,7 @@ from src.helpers.logging_config import get_logger
 from src.routers.login_router import router as login_router
 from src.routers.miscellaneous_data_router import router as misc_data_router
 from src.routers.users_router import router as users_router
+from src.routers.model_router import router as model_router
 
 HOST = "0.0.0.0"
 PORT = os.getenv("BACKEND_PORT")
@@ -25,6 +26,7 @@ smart_agri_tech_app = FastAPI(
 smart_agri_tech_app.include_router(login_router)
 smart_agri_tech_app.include_router(misc_data_router)
 smart_agri_tech_app.include_router(users_router)
+smart_agri_tech_app.include_router(model_router)
  
 smart_agri_tech_app.add_middleware(
     CORSMiddleware,

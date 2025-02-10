@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.services.miscellaneous_service import MiscellaneousDataService
 from src.db_connections.postgresql_conn import get_db
