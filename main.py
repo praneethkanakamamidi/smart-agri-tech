@@ -11,7 +11,11 @@ from src.routers.model_router import router as model_router
 
 HOST = "0.0.0.0"
 PORT = os.getenv("BACKEND_PORT")
-ALLOW_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+ALLOW_ORIGINS = [
+    "http://localhost", 
+    "http://127.0.0.1", 
+    "http://localhost:3000"
+]
 logger = get_logger(__name__)
 logger.info("Logger loaded")
 
