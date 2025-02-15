@@ -3,14 +3,16 @@ from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 import os
 from src.helpers.logging_config import get_logger
-
+from contextlib import asynccontextmanager
 from src.routers.login_router import router as login_router
 from src.routers.miscellaneous_data_router import router as misc_data_router
 from src.routers.users_router import router as users_router
 from src.routers.model_router import router as model_router
+from src.db_connections.mongo_conn import close_mongo_connection
 
 HOST = "0.0.0.0"
 PORT = os.getenv("BACKEND_PORT")
+PORT = int(PORT)
 ALLOW_ORIGINS = ["http://localhost", "http://127.0.0.1"]
 logger = get_logger(__name__)
 logger.info("Logger loaded")
@@ -46,6 +48,13 @@ async def home():
         "status": "success"
     }
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Smart-Agri-Tech API is starting up...")
+    yield  # Startup phase completed
+    logger.info("Shutting down Smart-Agri-Tech API...")
+    await close_mongo_connection()  # Close MongoDB connection
+
 if __name__ == "__main__":
     uvicorn.run(
         smart_agri_tech_app, 
@@ -54,4 +63,3 @@ if __name__ == "__main__":
         reload=True,
         reload_dirs=["/app/src"]
     )
-          
