@@ -17,3 +17,6 @@ pydantic>=2.0
 watchfiles
 pydantic-settings
 scikit-learn
+pymongo
+motor
+pymango

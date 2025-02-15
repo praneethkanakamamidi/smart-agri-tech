@@ -15,10 +15,12 @@ services:
       - smart-agri-tech-net
     depends_on:
       - smart-agri-tech-postgres
+      - smart-agri-tech-mongo
     environment:
       - WATCHFILES_FORCE_POLLING=true
     links:
       - "smart-agri-tech-postgres"
+      - "smart-agri-tech-mongo"
 
   smart-agri-tech-postgres:
     image: postgres:latest
@@ -46,9 +48,25 @@ services:
     depends_on:
       - smart-agri-tech-postgres
 
+  smart-agri-tech-mongo:
+    image: mongo:latest
+    container_name: smart-agri-tech-mongo
+    ports:
+      - "27017:27017"  # Use default MongoDB port
+    restart: always
+    env_file:
+      - ./.env
+    volumes:
+      - smart-agri-tech-mongo-db:/data/db
+    networks:
+      - smart-agri-tech-net
+    command: ["mongod", "--bind_ip", "0.0.0.0"]  # Ensure it listens on all interfaces
+
 volumes:
   smart-agri-tech-db:
+  smart-agri-tech-mongo-db:
 
 networks:
   smart-agri-tech-net:
     driver: bridge
+    name: smart-agri-tech-net  # Explicitly name the network to avoid recreation issues

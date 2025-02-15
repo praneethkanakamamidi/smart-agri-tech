@@ -9,6 +9,9 @@ from src.helpers.settings_config import OAuthSettings
 from fastapi.security import OAuth2PasswordBearer
 from src.db_connections.postgresql_conn import get_db
 from src.security_utils.oauth_config import OAuth2Handler
+from src.services.permissions_service import PermissionsService
+from sqlalchemy import func, or_
+
 
 # Initialize utilities and settings
 hashing = Hashing()
@@ -18,6 +21,8 @@ oauth_settings = OAuthSettings()
 # Define OAuth2 password bearer scheme for authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 
+# Initialize permissions
+permissions_service = PermissionsService()
 
 class LoginService(OAuth2Handler):
     """Service class responsible for user authentication and token management."""
@@ -59,7 +64,7 @@ class LoginService(OAuth2Handler):
                 detail="User not found: Enter valid user details",
                 headers={"Content-Type": "application/json"}
             )
-        
+
         # Validate password
         if not hashing.verify_password(form_data.password, user_data.password):
             raise HTTPException(
@@ -80,6 +85,7 @@ class LoginService(OAuth2Handler):
                 detail="Access denied: The user account is inactive. Contact support for assistance.",
                 headers={"Content-Type": "application/json"}
             )
+        permissions = permissions_service.get_permissions(user_data.role_id, db)
 
         # Generate authentication tokens using the inherited methods
         access_token = self.generate_access_token(user_data, self.access_token_secret_key, self.access_expiry)
@@ -89,6 +95,7 @@ class LoginService(OAuth2Handler):
             "status": "success",
             "access_token": access_token,
             "refresh_token": refresh_token,
+            "permissions" : permissions
         }
 
 

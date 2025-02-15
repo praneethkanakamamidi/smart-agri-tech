@@ -1,41 +1,39 @@
 # Use the official tiangolo/uvicorn-gunicorn-fastapi image with Python 3.10
-
 FROM tiangolo/uvicorn-gunicorn-fastapi:python3.10
 
-# Set environment variables for Python to avoid unnecessary bytecode and ensure stdout/stderr are unbuffered
+# Set environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    HOME=/smart-agri-tech
 
-# Set the working directory inside the container
+# Set working directory
 WORKDIR /smart-agri-tech
 
-# Copy and install dependencies first to leverage Docker layer caching
+# Copy and install dependencies first
 COPY ./requirements.txt /smart-agri-tech/
-
-# Install Python dependencies without cache
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
+# Copy the rest of the application
 COPY ./ /smart-agri-tech/
 
 # Ensure the entrypoint script is executable
 RUN chmod +x /smart-agri-tech/entrypoint.sh
 
-# Create a non-root user for security, but only if it doesn't exist
+# Create non-root user if not exists
 RUN if ! id "appuser" &>/dev/null; then \
         addgroup --system appgroup && \
         adduser --system --ingroup appgroup --disabled-password --gecos "" appuser; \
     fi && \
-    chown -R appuser:appgroup /smart-agri-tech
+    chown -R appuser:appgroup /smart-agri-tech /usr/local/lib/python*
 
 # Switch to the created non-root user
 USER appuser
 
-# Expose the port the app will run on (default for FastAPI is 8000)
+# Expose backend port
 EXPOSE ${BACKEND_PORT}
 
-# Set the entrypoint to the entrypoint script
+# Set the entrypoint
 ENTRYPOINT ["/smart-agri-tech/entrypoint.sh"]
 
-# Set the default command to run Uvicorn with FastAPI app
+# Run FastAPI app
 CMD ["sh", "-c", "uvicorn main:smart_agri_tech_app --host 0.0.0.0 --port $BACKEND_PORT --reload"]
