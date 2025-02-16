@@ -111,6 +111,12 @@ class UsersService:
         try:
             user_data = db.query(Users).filter(Users.id == id).one_or_none()
             if user_data:
+                role_data=db.query(Roles).filter(Roles.id==user_data.role_id).first()
+                if role_data:
+                    user_data.role_name=role_data.name
+                miscellaneous_status_data=db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id==user_data.status).first()
+                if miscellaneous_status_data:
+                    user_data.user_status=miscellaneous_status_data.value
                 return user_data
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -124,11 +130,18 @@ class UsersService:
             )
         finally:
             db.close()
-    
+            
     def get_all_users(self, db: Session):
         try:
             users_data = db.query(Users).order_by(Users.created_time.desc()).all()
             if users_data:
+                for user_data in users_data:
+                    role_data=db.query(Roles).filter(Roles.id==user_data.role_id).first()
+                    if role_data:
+                        user_data.role_name=role_data.name
+                    miscellaneous_status_data=db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id==user_data.status).first()
+                    if miscellaneous_status_data:
+                        user_data.user_status=miscellaneous_status_data.value
                 return users_data
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -143,3 +156,57 @@ class UsersService:
         finally:
             db.close()
 
+
+    def activate_deactivate_user(self, id: int, db: Session):
+        try:
+            initial_state = ""
+            final_state = ""
+
+            # Fetch user and status data
+            user_data = db.query(Users).filter(Users.id == id).first()
+            inactive_misc_data = db.query(Miscellaneous_Data).filter(
+                Miscellaneous_Data.category == "status",
+                Miscellaneous_Data.value == "inactive"
+            ).first()
+            active_misc_data = db.query(Miscellaneous_Data).filter(
+                Miscellaneous_Data.category == "status",
+                Miscellaneous_Data.value == "active"
+            ).first()
+
+            # Check if user and status data are found
+            if not user_data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found"
+                )
+            
+            if not inactive_misc_data or not active_misc_data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Status data not found"
+                )
+
+            # Toggle status
+            if user_data.status == inactive_misc_data.id:
+                user_data.status = active_misc_data.id
+                db.commit()
+                initial_state = "inactive"
+                final_state = "active"
+            elif user_data.status == active_misc_data.id:
+                user_data.status = inactive_misc_data.id
+                db.commit()
+                initial_state = "active"
+                final_state = "inactive"
+            
+            return {"message": f"User {user_data.user_name} status has been changed from {initial_state} to {final_state}"}
+
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(e)
+            )
+        finally:
+            db.close()
+
+    

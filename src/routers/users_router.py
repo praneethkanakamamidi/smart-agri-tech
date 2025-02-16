@@ -50,3 +50,13 @@ def get_users(
 ):
     response = users_service.get_all_users(db) 
     return response
+
+@router.get("/user-status/{id}")
+def user_status(
+    id: int,
+    db: Session = Depends(get_db),
+    users_service: UsersService = Depends(users_service),
+    user: Users = Depends(get_current_active_user)
+):
+    response = users_service.activate_deactivate_user(id, db) 
+    return response
