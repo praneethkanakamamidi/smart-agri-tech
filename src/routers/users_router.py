@@ -6,7 +6,7 @@ from src.db_connections.postgresql_conn import get_db  # Import database session
 from src.data_models.users_model import Users
 from src.services.login_service import LoginService
 
-def get_users_service() -> UsersService:
+def users_service() -> UsersService:
     return UsersService()
 
 router = APIRouter(prefix="/api", tags=["Users"])
@@ -17,7 +17,7 @@ get_current_active_user = LoginService.get_current_active_user
 async def create_user(
     payload: Add_User,
     db: Session = Depends(get_db),
-    users_service: UsersService = Depends(get_users_service),
+    users_service: UsersService = Depends(users_service),
 ):
     response = await users_service.add_user(payload, db)  # Ensure await
     return response
@@ -26,7 +26,7 @@ async def create_user(
 async def verify_user_otp(
     payload: VerifyUserOtp,
     db: Session = Depends(get_db),
-    users_service: UsersService = Depends(get_users_service),
+    users_service: UsersService = Depends(users_service),
 ):
     response = await users_service.verify_user_otp(payload, db)
     return response
@@ -35,8 +35,18 @@ async def verify_user_otp(
 def get_user(
     id: int,
     db: Session = Depends(get_db),
-    users_service: UsersService = Depends(get_users_service),
-    # user: Users = Depends(get_current_active_user)
+    users_service: UsersService = Depends(users_service),
+    user: Users = Depends(get_current_active_user)
 ):
     response = users_service.get_user(id, db) 
+    return response
+
+
+@router.get("/users/")
+def get_users(
+    db: Session = Depends(get_db),
+    users_service: UsersService = Depends(users_service),
+    user: Users = Depends(get_current_active_user)
+):
+    response = users_service.get_all_users(db) 
     return response

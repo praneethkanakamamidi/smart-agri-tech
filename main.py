@@ -13,7 +13,11 @@ from src.db_connections.mongo_conn import close_mongo_connection
 HOST = "0.0.0.0"
 PORT = os.getenv("BACKEND_PORT")
 PORT = int(PORT)
-ALLOW_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+ALLOW_ORIGINS = [
+    "http://localhost",
+    "http://127.0.0.1",
+    "http://localhost:3000"  # ✅ Add this line to allow frontend access
+]
 logger = get_logger(__name__)
 logger.info("Logger loaded")
 

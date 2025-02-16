@@ -124,3 +124,22 @@ class UsersService:
             )
         finally:
             db.close()
+    
+    def get_all_users(self, db: Session):
+        try:
+            users_data = db.query(Users).order_by(Users.created_time.desc()).all()
+            if users_data:
+                return users_data
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No users found"
+            )
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(e)
+            )
+        finally:
+            db.close()
+
