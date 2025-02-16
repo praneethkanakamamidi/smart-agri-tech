@@ -93,6 +93,7 @@ class LoginService(OAuth2Handler):
 
         return {
             "status": "success",
+            "user_name" : user_data.user_name,
             "access_token": access_token,
             "refresh_token": refresh_token,
             "permissions" : permissions
