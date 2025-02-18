@@ -49,8 +49,10 @@ class FertilizersService:
             fertilizer_data = db.query(Fertilizers).filter(Fertilizers.id==id).first()
             created_user_data = db.query(Users).filter(Users.id==fertilizer_data.created_by).first()
             updated_user_data = db.query(Users).filter(Users.id==fertilizer_data.updated_by).first()
+            status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id ==fertilizer_data.id).first()
             fertilizer_data.created_user=created_user_data.first_name if created_user_data else None
             fertilizer_data.updated_user=updated_user_data.first_name if updated_user_data else None
+            fertilizer_data.fertilizer_status=status_data.value if status_data else None
             return fertilizer_data
         except Exception as e:
             db.rollback()
@@ -62,6 +64,9 @@ class FertilizersService:
     def get_fertilizers(self, db: Session) -> list:
         try:
             fertilizer_data = db.query(Fertilizers).order_by(Fertilizers.created_at.desc()).all()
+            for fertilizer in fertilizer_data:
+                status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id ==fertilizer.status).first()
+                fertilizer.fertilizer_status=status_data.value if status_data else None
             return fertilizer_data
         except Exception as e:
             db.rollback()
