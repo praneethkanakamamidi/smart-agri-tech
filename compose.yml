@@ -52,7 +52,7 @@ services:
     image: mongo:latest
     container_name: smart-agri-tech-mongo
     ports:
-      - "27017:27017"  # Use default MongoDB port
+      - "27017:27017"
     restart: always
     env_file:
       - ./.env
@@ -60,7 +60,7 @@ services:
       - smart-agri-tech-mongo-db:/data/db
     networks:
       - smart-agri-tech-net
-    command: ["mongod", "--bind_ip", "0.0.0.0"]  # Ensure it listens on all interfaces
+    command: ["mongod", "--bind_ip", "0.0.0.0"]
 
 volumes:
   smart-agri-tech-db:
@@ -69,4 +69,4 @@ volumes:
 networks:
   smart-agri-tech-net:
     driver: bridge
-    name: smart-agri-tech-net  # Explicitly name the network to avoid recreation issues
+    name: smart-agri-tech-net

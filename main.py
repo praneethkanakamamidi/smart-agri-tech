@@ -9,7 +9,10 @@ from src.routers.miscellaneous_data_router import router as misc_data_router
 from src.routers.users_router import router as users_router
 from src.routers.model_router import router as model_router
 from src.routers.fertilizers_router import router as fertilizer_router
+from src.routers.crops_router import router as crops_router
+from src.routers.soil_router import router as soil_router
 from src.db_connections.mongo_conn import close_mongo_connection
+
 
 
 HOST = "0.0.0.0"
@@ -18,7 +21,7 @@ PORT = int(PORT)
 ALLOW_ORIGINS = [
     "http://localhost",
     "http://127.0.0.1",
-    "http://localhost:3000"  # ✅ Add this line to allow frontend access
+    "http://localhost:3000"
 ]
 logger = get_logger(__name__)
 logger.info("Logger loaded")
@@ -36,6 +39,8 @@ smart_agri_tech_app.include_router(misc_data_router)
 smart_agri_tech_app.include_router(users_router)
 smart_agri_tech_app.include_router(model_router)
 smart_agri_tech_app.include_router(fertilizer_router)
+smart_agri_tech_app.include_router(crops_router)
+smart_agri_tech_app.include_router(soil_router)
 
  
 smart_agri_tech_app.add_middleware(

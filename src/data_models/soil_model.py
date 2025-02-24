@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
 from src.db_connections.postgresql_conn import Base
 
-class Soil_Model(Base):
+class Soil(Base):
     __tablename__ = "soil"
     
     id = Column(Integer, primary_key=True)

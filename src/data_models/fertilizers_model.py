@@ -5,7 +5,7 @@ class Fertilizers(Base):
     __tablename__ = "fertilizers"
     
     id = Column(Integer, primary_key=True)
-    fetilizer_name = Column(String(10))
+    fertilizer_name = Column(String(10))
     application_method = Column(String(10))
     description = Column(String(150))
     status = Column(Integer, ForeignKey('miscellaneous_data.id', ondelete='CASCADE'))

@@ -10,7 +10,7 @@ class FertilizersService:
     def post_fertilizer(self, payload, db:Session):
         try:
             existing_fertilizer_data = db.query(Fertilizers).filter(
-                func.lower(Fertilizers.fetilizer_name)==payload.fetilizer_name.lower()
+                func.lower(Fertilizers.fertilizer_name)==payload.fertilizer_name.lower()
                 ).first()
             active_misc_data = db.query(Miscellaneous_Data).filter(
                 Miscellaneous_Data.category == "status",
@@ -24,7 +24,7 @@ class FertilizersService:
                 )
                  
             new_fertilizer = Fertilizers(
-                fetilizer_name=payload.fetilizer_name,
+                fertilizer_name=payload.fertilizer_name,
                 application_method=payload.application_method,
                 description=payload.description,
                 created_by=payload.created_by,
@@ -34,7 +34,7 @@ class FertilizersService:
             db.add(new_fertilizer)
             db.commit()
             
-            return {"message": f"Fertilizer '{payload.fetilizer_name}' has been successfully created!"}
+            return {"message": f"Fertilizer '{payload.fertilizer_name}' has been successfully created!"}
         
         except Exception as e:
             db.rollback()
@@ -49,10 +49,10 @@ class FertilizersService:
             fertilizer_data = db.query(Fertilizers).filter(Fertilizers.id==id).first()
             created_user_data = db.query(Users).filter(Users.id==fertilizer_data.created_by).first()
             updated_user_data = db.query(Users).filter(Users.id==fertilizer_data.updated_by).first()
-            status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id ==fertilizer_data.id).first()
+            status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id ==fertilizer_data.status).first()
             fertilizer_data.created_user=created_user_data.first_name if created_user_data else None
             fertilizer_data.updated_user=updated_user_data.first_name if updated_user_data else None
-            fertilizer_data.fertilizer_status=status_data.value if status_data else None
+            fertilizer_data.status_value=status_data.value if status_data else None
             return fertilizer_data
         except Exception as e:
             db.rollback()
@@ -66,7 +66,7 @@ class FertilizersService:
             fertilizer_data = db.query(Fertilizers).order_by(Fertilizers.created_at.desc()).all()
             for fertilizer in fertilizer_data:
                 status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id ==fertilizer.status).first()
-                fertilizer.fertilizer_status=status_data.value if status_data else None
+                fertilizer.status_value=status_data.value if status_data else None
             return fertilizer_data
         except Exception as e:
             db.rollback()
@@ -86,7 +86,7 @@ class FertilizersService:
                     detail="Error: Fertilizer of that id does not exist",
                 )
 
-            existing_fertilizer_data.fetilizer_name=payload.fetilizer_name
+            existing_fertilizer_data.fertilizer_name=payload.fertilizer_name
             existing_fertilizer_data.application_method=payload.application_method
             existing_fertilizer_data.description=payload.description
             existing_fertilizer_data.updated_by=payload.updated_by
@@ -141,13 +141,13 @@ class FertilizersService:
                 
             elif existing_fertilizer_data.status == active_misc_data.id:
                 existing_fertilizer_data.status = inactive_misc_data.id
-                db.commit()
                 existing_fertilizer_data.updated_by=payload.updated_by
                 existing_fertilizer_data.updated_at=datetime.now()
+                db.commit()
                 initial_state = "active"
                 final_state = "inactive"
             
-            return {"message": f"{existing_fertilizer_data.fetilizer_name} status has been changed from {initial_state} to {final_state}"}
+            return {"message": f"{existing_fertilizer_data.fertilizer_name} status has been changed from {initial_state} to {final_state}"}
 
         except Exception as e:
             db.rollback()

@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
 from src.db_connections.postgresql_conn import Base
 
-class Crops_Model(Base):
+class Crops(Base):
     __tablename__ = "crops"
     
     id = Column(Integer, primary_key=True)
