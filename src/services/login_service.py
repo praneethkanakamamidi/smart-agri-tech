@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from jose import jwt
 from datetime import timedelta, datetime
 from src.data_models.users_model import Users
+from src.data_models.roles_model import Roles
 from src.data_models.miscellaneous_model import Miscellaneous_Data
 from src.security_utils.hashing_config import Hashing
 from src.helpers.settings_config import OAuthSettings
@@ -86,14 +87,16 @@ class LoginService(OAuth2Handler):
                 headers={"Content-Type": "application/json"}
             )
         permissions = permissions_service.get_permissions(user_data.role_id, db)
-
+        role_data = db.query(Roles).filter(Roles.id==user_data.role_id).first()
         # Generate authentication tokens using the inherited methods
         access_token = self.generate_access_token(user_data, self.access_token_secret_key, self.access_expiry)
         refresh_token = self.generate_refresh_token(user_data, self.refresh_expiry)
 
         return {
             "status": "success",
+            "id": user_data.id,
             "user_name" : user_data.user_name,
+            "role":role_data.name,
             "access_token": access_token,
             "refresh_token": refresh_token,
             "permissions" : permissions
