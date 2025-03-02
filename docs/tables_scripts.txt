@@ -1,0 +1,81 @@
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    user_name VARCHAR(50),
+    first_name VARCHAR(30),
+    last_name VARCHAR(30),
+    password VARCHAR(150),
+    status INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
+    role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+    created_time TIMESTAMP,
+    updated_time TIMESTAMP,
+    updated_by INTEGER REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(30),
+    status INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
+    created_time TIMESTAMP,
+    updated_time TIMESTAMP,
+    created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    updated_by INTEGER REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE permissions (
+    id SERIAL PRIMARY KEY,
+    permission_name VARCHAR(30),
+    permission_key VARCHAR(50),
+    created_time TIMESTAMP,
+    updated_time TIMESTAMP,
+    created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    updated_by INTEGER REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE role_permissions (
+    id SERIAL PRIMARY KEY,
+    role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+    permission_id INTEGER REFERENCES permissions(id) ON DELETE CASCADE,
+    can_read INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
+    can_write INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
+    can_delete INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
+    created_time TIMESTAMP,
+    updated_time TIMESTAMP,
+    created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    updated_by INTEGER REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE crops (
+    id SERIAL PRIMARY KEY,
+    crop_name VARCHAR(10),
+    crop_type VARCHAR(10),
+    description VARCHAR(150),
+    status INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
+    created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    updated_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+CREATE TABLE soil (
+    id SERIAL PRIMARY KEY,
+    soil_name VARCHAR(10),
+    soil_texture VARCHAR(10),
+    description VARCHAR(150),
+    status INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
+    created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    updated_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+CREATE TABLE fertilizers (
+    id SERIAL PRIMARY KEY,
+    fertilizer_name VARCHAR(10),
+    application_method VARCHAR(10),
+    description VARCHAR(150),
+    status INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
+    created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    updated_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
