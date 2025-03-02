@@ -63,9 +63,9 @@ class FarmerInventoryService:
                     crop_data = db.query(Crops).filter(Crops.id==stock.crop).first()
                     soil_data = db.query(Soil).filter(Soil.id==stock.soil).first()
                     fertilizer_data = db.query(Fertilizers).filter(Fertilizers.id==stock.fertilizer).first()
-                    stock.crop_data = crop_data.crop_name if crop_data else None
+                    stock.crop_name = crop_data.crop_name if crop_data else None
                     stock.soil_name = soil_data.soil_name if soil_data else None
-                    stock.fertilizer_data = fertilizer_data.fertilizer_name if fertilizer_data else None
+                    stock.fertilizer_name = fertilizer_data.fertilizer_name if fertilizer_data else None
                 return stock_data
             else:
                 raise HTTPException(
