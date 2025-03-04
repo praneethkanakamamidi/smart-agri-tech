@@ -94,3 +94,117 @@ CREATE TABLE farmer_inventory (
 );
 
 
+
+
+
+
+CREATE TABLE states (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+);
+
+INSERT INTO states (name) VALUES
+('Andhra Pradesh'), ('Arunachal Pradesh'), ('Assam'), ('Bihar'), ('Chhattisgarh'),
+('Goa'), ('Gujarat'), ('Haryana'), ('Himachal Pradesh'), ('Jharkhand'),
+('Karnataka'), ('Kerala'), ('Madhya Pradesh'), ('Maharashtra'), ('Manipur'),
+('Meghalaya'), ('Mizoram'), ('Nagaland'), ('Odisha'), ('Punjab'),
+('Rajasthan'), ('Sikkim'), ('Tamil Nadu'), ('Telangana'), ('Tripura'),
+('Uttar Pradesh'), ('Uttarakhand'), ('West Bengal');
+
+CREATE TABLE districts (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    state_id INT REFERENCES states(id) ON DELETE CASCADE
+);
+
+
+INSERT INTO districts (name, state_id) VALUES
+('Adilabad', (SELECT id FROM states WHERE name = 'Telangana')),
+('Bhadradri Kothagudem', (SELECT id FROM states WHERE name = 'Telangana')),
+('Hyderabad', (SELECT id FROM states WHERE name = 'Telangana')),
+('Jagtial', (SELECT id FROM states WHERE name = 'Telangana')),
+('Jangaon', (SELECT id FROM states WHERE name = 'Telangana')),
+('Jayashankar Bhupalpally', (SELECT id FROM states WHERE name = 'Telangana')),INSERT INTO districts (name, state_id) VALUES
+('Anantapur', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
+('Chittoor', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
+('East Godavari', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
+('Guntur', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
+('Kurnool', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
+('Visakhapatnam', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
+('Dibang Valley', (SELECT id FROM states WHERE name = 'Arunachal Pradesh')),
+('Papum Pare', (SELECT id FROM states WHERE name = 'Arunachal Pradesh')),
+('Tawang', (SELECT id FROM states WHERE name = 'Arunachal Pradesh')),
+('Dibrugarh', (SELECT id FROM states WHERE name = 'Assam')),
+('Kamrup', (SELECT id FROM states WHERE name = 'Assam')),
+('Nagaon', (SELECT id FROM states WHERE name = 'Assam')),
+('Patna', (SELECT id FROM states WHERE name = 'Bihar')),
+('Gaya', (SELECT id FROM states WHERE name = 'Bihar')),
+('Muzaffarpur', (SELECT id FROM states WHERE name = 'Bihar')),
+('Raipur', (SELECT id FROM states WHERE name = 'Chhattisgarh')),
+('Bilaspur', (SELECT id FROM states WHERE name = 'Chhattisgarh')),
+('Surguja', (SELECT id FROM states WHERE name = 'Chhattisgarh')),
+('North Goa', (SELECT id FROM states WHERE name = 'Goa')),
+('South Goa', (SELECT id FROM states WHERE name = 'Goa')),
+('Ahmedabad', (SELECT id FROM states WHERE name = 'Gujarat')),
+('Surat', (SELECT id FROM states WHERE name = 'Gujarat')),
+('Vadodara', (SELECT id FROM states WHERE name = 'Gujarat')),
+('Gurgaon', (SELECT id FROM states WHERE name = 'Haryana')),
+('Faridabad', (SELECT id FROM states WHERE name = 'Haryana')),
+('Shimla', (SELECT id FROM states WHERE name = 'Himachal Pradesh')),
+('Kangra', (SELECT id FROM states WHERE name = 'Himachal Pradesh')),
+('Ranchi', (SELECT id FROM states WHERE name = 'Jharkhand')),
+('Dhanbad', (SELECT id FROM states WHERE name = 'Jharkhand')),
+('Bengaluru Urban', (SELECT id FROM states WHERE name = 'Karnataka')),
+('Mysuru', (SELECT id FROM states WHERE name = 'Karnataka')),
+('Ernakulam', (SELECT id FROM states WHERE name = 'Kerala')),
+('Thiruvananthapuram', (SELECT id FROM states WHERE name = 'Kerala')),
+('Indore', (SELECT id FROM states WHERE name = 'Madhya Pradesh')),
+('Bhopal', (SELECT id FROM states WHERE name = 'Madhya Pradesh')),
+('Mumbai', (SELECT id FROM states WHERE name = 'Maharashtra')),
+('Pune', (SELECT id FROM states WHERE name = 'Maharashtra')),
+('Imphal', (SELECT id FROM states WHERE name = 'Manipur')),
+('Shillong', (SELECT id FROM states WHERE name = 'Meghalaya')),
+('Aizawl', (SELECT id FROM states WHERE name = 'Mizoram')),
+('Kohima', (SELECT id FROM states WHERE name = 'Nagaland')),
+('Bhubaneswar', (SELECT id FROM states WHERE name = 'Odisha')),
+('Cuttack', (SELECT id FROM states WHERE name = 'Odisha')),
+('Amritsar', (SELECT id FROM states WHERE name = 'Punjab')),
+('Ludhiana', (SELECT id FROM states WHERE name = 'Punjab')),
+('Jaipur', (SELECT id FROM states WHERE name = 'Rajasthan')),
+('Udaipur', (SELECT id FROM states WHERE name = 'Rajasthan')),
+('Gangtok', (SELECT id FROM states WHERE name = 'Sikkim')),
+('Chennai', (SELECT id FROM states WHERE name = 'Tamil Nadu')),
+('Coimbatore', (SELECT id FROM states WHERE name = 'Tamil Nadu')),
+('Agartala', (SELECT id FROM states WHERE name = 'Tripura')),
+('Lucknow', (SELECT id FROM states WHERE name = 'Uttar Pradesh')),
+('Varanasi', (SELECT id FROM states WHERE name = 'Uttar Pradesh')),
+('Dehradun', (SELECT id FROM states WHERE name = 'Uttarakhand')),
+('Kolkata', (SELECT id FROM states WHERE name = 'West Bengal')),
+('Darjeeling', (SELECT id FROM states WHERE name = 'West Bengal'))
+('Jogulamba Gadwal', (SELECT id FROM states WHERE name = 'Telangana')),
+('Kamareddy', (SELECT id FROM states WHERE name = 'Telangana')),
+('Karimnagar', (SELECT id FROM states WHERE name = 'Telangana')),
+('Khammam', (SELECT id FROM states WHERE name = 'Telangana')),
+('Kumuram Bheem Asifabad', (SELECT id FROM states WHERE name = 'Telangana')),
+('Mahabubabad', (SELECT id FROM states WHERE name = 'Telangana')),
+('Mahabubnagar', (SELECT id FROM states WHERE name = 'Telangana')),
+('Mancherial', (SELECT id FROM states WHERE name = 'Telangana')),
+('Medak', (SELECT id FROM states WHERE name = 'Telangana')),
+('Medchal–Malkajgiri', (SELECT id FROM states WHERE name = 'Telangana')),
+('Mulugu', (SELECT id FROM states WHERE name = 'Telangana')),
+('Nagarkurnool', (SELECT id FROM states WHERE name = 'Telangana')),
+('Nalgonda', (SELECT id FROM states WHERE name = 'Telangana')),
+('Narayanpet', (SELECT id FROM states WHERE name = 'Telangana')),
+('Nirmal', (SELECT id FROM states WHERE name = 'Telangana')),
+('Nizamabad', (SELECT id FROM states WHERE name = 'Telangana')),
+('Peddapalli', (SELECT id FROM states WHERE name = 'Telangana')),
+('Rajanna Sircilla', (SELECT id FROM states WHERE name = 'Telangana')),
+('Ranga Reddy', (SELECT id FROM states WHERE name = 'Telangana')),
+('Sangareddy', (SELECT id FROM states WHERE name = 'Telangana')),
+('Siddipet', (SELECT id FROM states WHERE name = 'Telangana')),
+('Suryapet', (SELECT id FROM states WHERE name = 'Telangana')),
+('Vikarabad', (SELECT id FROM states WHERE name = 'Telangana')),
+('Wanaparthy', (SELECT id FROM states WHERE name = 'Telangana')),
+('Warangal Rural', (SELECT id FROM states WHERE name = 'Telangana')),
+('Warangal Urban', (SELECT id FROM states WHERE name = 'Telangana')),
+('Yadadri Bhuvanagiri', (SELECT id FROM states WHERE name = 'Telangana'));
