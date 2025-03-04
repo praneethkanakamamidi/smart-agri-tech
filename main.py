@@ -11,6 +11,7 @@ from src.routers.model_router import router as model_router
 from src.routers.fertilizers_router import router as fertilizer_router
 from src.routers.crops_router import router as crops_router
 from src.routers.soil_router import router as soil_router
+from src.routers.farmer_inventory_router import router as farmer_inventory_router
 from src.db_connections.mongo_conn import close_mongo_connection
 
 
@@ -33,7 +34,7 @@ smart_agri_tech_app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
-
+ 
 smart_agri_tech_app.include_router(login_router)
 smart_agri_tech_app.include_router(misc_data_router)
 smart_agri_tech_app.include_router(users_router)
@@ -41,6 +42,7 @@ smart_agri_tech_app.include_router(model_router)
 smart_agri_tech_app.include_router(fertilizer_router)
 smart_agri_tech_app.include_router(crops_router)
 smart_agri_tech_app.include_router(soil_router)
+smart_agri_tech_app.include_router(farmer_inventory_router)
 
  
 smart_agri_tech_app.add_middleware(

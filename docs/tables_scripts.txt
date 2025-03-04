@@ -79,3 +79,18 @@ CREATE TABLE fertilizers (
     created_at TIMESTAMP,
     updated_at TIMESTAMP
 );
+
+CREATE TABLE farmer_inventory (
+    id SERIAL PRIMARY KEY,
+    crop INTEGER REFERENCES crops(id) ON DELETE CASCADE,
+    fertilizer INTEGER REFERENCES fertilizers(id) ON DELETE SET NULL,
+    soil INTEGER REFERENCES soil(id) ON DELETE SET NULL,
+    weight_kg int,
+    proposed_cost int,
+    created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    updated_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+

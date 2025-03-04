@@ -4,7 +4,7 @@ import numpy as np
 from src.helpers.logging_config import logging  # Import logger
 
 class ModelService:
-    def model_service(self, payload) -> dict:
+    def predict_crop(self, payload) -> dict:
         """Predicts the crop type based on the input features and returns a dictionary."""
         try:
             logging.info("Loading model, scaler, and label encoder...")
