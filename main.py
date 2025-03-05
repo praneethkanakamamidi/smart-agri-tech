@@ -12,6 +12,7 @@ from src.routers.fertilizers_router import router as fertilizer_router
 from src.routers.crops_router import router as crops_router
 from src.routers.soil_router import router as soil_router
 from src.routers.farmer_inventory_router import router as farmer_inventory_router
+from src.routers.locations_router import router as location_router
 from src.db_connections.mongo_conn import close_mongo_connection
 
 
@@ -43,6 +44,7 @@ smart_agri_tech_app.include_router(fertilizer_router)
 smart_agri_tech_app.include_router(crops_router)
 smart_agri_tech_app.include_router(soil_router)
 smart_agri_tech_app.include_router(farmer_inventory_router)
+smart_agri_tech_app.include_router(location_router)
 
  
 smart_agri_tech_app.add_middleware(
@@ -68,13 +70,13 @@ async def lifespan(app: FastAPI):
     logger.info("Smart-Agri-Tech API is starting up...")
     yield  # Startup phase completed
     logger.info("Shutting down Smart-Agri-Tech API...")
-    await close_mongo_connection()  # Close MongoDB connection
+    await close_mongo_connection()
 
 if __name__ == "__main__":
     uvicorn.run(
         smart_agri_tech_app, 
         host=HOST, 
         port=PORT,
-        reload=True,
+        reload=True, 
         reload_dirs=["/app/src"]
     )

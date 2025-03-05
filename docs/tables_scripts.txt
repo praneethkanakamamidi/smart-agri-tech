@@ -95,116 +95,685 @@ CREATE TABLE farmer_inventory (
 
 
 
-
-
-
 CREATE TABLE states (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL
+    state_name VARCHAR(100) UNIQUE NOT NULL,
+    created_by INT REFERENCES users(id),
+    created_at TIMESTAMP
 );
 
-INSERT INTO states (name) VALUES
-('Andhra Pradesh'), ('Arunachal Pradesh'), ('Assam'), ('Bihar'), ('Chhattisgarh'),
-('Goa'), ('Gujarat'), ('Haryana'), ('Himachal Pradesh'), ('Jharkhand'),
-('Karnataka'), ('Kerala'), ('Madhya Pradesh'), ('Maharashtra'), ('Manipur'),
-('Meghalaya'), ('Mizoram'), ('Nagaland'), ('Odisha'), ('Punjab'),
-('Rajasthan'), ('Sikkim'), ('Tamil Nadu'), ('Telangana'), ('Tripura'),
-('Uttar Pradesh'), ('Uttarakhand'), ('West Bengal');
+INSERT INTO states (state_name, created_by, created_at) VALUES
+    ('Andhra Pradesh', 1, NOW()),
+    ('Arunachal Pradesh', 1, NOW()),
+    ('Assam', 1, NOW()),
+    ('Bihar', 1, NOW()),
+    ('Chhattisgarh', 1, NOW()),
+    ('Goa', 1, NOW()),
+    ('Gujarat', 1, NOW()),
+    ('Haryana', 1, NOW()),
+    ('Himachal Pradesh', 1, NOW()),
+    ('Jharkhand', 1, NOW()),
+    ('Karnataka', 1, NOW()),
+    ('Kerala', 1, NOW()),
+    ('Madhya Pradesh', 1, NOW()),
+    ('Maharashtra', 1, NOW()),
+    ('Manipur', 1, NOW()),
+    ('Meghalaya', 1, NOW()),
+    ('Mizoram', 1, NOW()),
+    ('Nagaland', 1, NOW()),
+    ('Odisha', 1, NOW()),
+    ('Punjab', 1, NOW()),
+    ('Rajasthan', 1, NOW()),
+    ('Sikkim', 1, NOW()),
+    ('Tamil Nadu', 1, NOW()),
+    ('Telangana', 1, NOW()),
+    ('Tripura', 1, NOW()),
+    ('Uttar Pradesh', 1, NOW()),
+    ('Uttarakhand', 1, NOW()),
+    ('West Bengal', 1, NOW());
+
 
 CREATE TABLE districts (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    state_id INT REFERENCES states(id) ON DELETE CASCADE
+    district_name VARCHAR(100) NOT NULL,
+    state_id INT REFERENCES states(id) ON DELETE CASCADE,
+    created_by INT REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Anantapur', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('Chittoor', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('East Godavari', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('Guntur', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('Kadapa', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('Krishna', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('Kurnool', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('Nellore', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('Prakasam', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('Srikakulam', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('Visakhapatnam', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('Vizianagaram', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW()),
+    ('West Godavari', (SELECT id FROM states WHERE state_name = 'Andhra Pradesh'), 1, NOW());
 
-INSERT INTO districts (name, state_id) VALUES
-('Adilabad', (SELECT id FROM states WHERE name = 'Telangana')),
-('Bhadradri Kothagudem', (SELECT id FROM states WHERE name = 'Telangana')),
-('Hyderabad', (SELECT id FROM states WHERE name = 'Telangana')),
-('Jagtial', (SELECT id FROM states WHERE name = 'Telangana')),
-('Jangaon', (SELECT id FROM states WHERE name = 'Telangana')),
-('Jayashankar Bhupalpally', (SELECT id FROM states WHERE name = 'Telangana')),INSERT INTO districts (name, state_id) VALUES
-('Anantapur', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
-('Chittoor', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
-('East Godavari', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
-('Guntur', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
-('Kurnool', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
-('Visakhapatnam', (SELECT id FROM states WHERE name = 'Andhra Pradesh')),
-('Dibang Valley', (SELECT id FROM states WHERE name = 'Arunachal Pradesh')),
-('Papum Pare', (SELECT id FROM states WHERE name = 'Arunachal Pradesh')),
-('Tawang', (SELECT id FROM states WHERE name = 'Arunachal Pradesh')),
-('Dibrugarh', (SELECT id FROM states WHERE name = 'Assam')),
-('Kamrup', (SELECT id FROM states WHERE name = 'Assam')),
-('Nagaon', (SELECT id FROM states WHERE name = 'Assam')),
-('Patna', (SELECT id FROM states WHERE name = 'Bihar')),
-('Gaya', (SELECT id FROM states WHERE name = 'Bihar')),
-('Muzaffarpur', (SELECT id FROM states WHERE name = 'Bihar')),
-('Raipur', (SELECT id FROM states WHERE name = 'Chhattisgarh')),
-('Bilaspur', (SELECT id FROM states WHERE name = 'Chhattisgarh')),
-('Surguja', (SELECT id FROM states WHERE name = 'Chhattisgarh')),
-('North Goa', (SELECT id FROM states WHERE name = 'Goa')),
-('South Goa', (SELECT id FROM states WHERE name = 'Goa')),
-('Ahmedabad', (SELECT id FROM states WHERE name = 'Gujarat')),
-('Surat', (SELECT id FROM states WHERE name = 'Gujarat')),
-('Vadodara', (SELECT id FROM states WHERE name = 'Gujarat')),
-('Gurgaon', (SELECT id FROM states WHERE name = 'Haryana')),
-('Faridabad', (SELECT id FROM states WHERE name = 'Haryana')),
-('Shimla', (SELECT id FROM states WHERE name = 'Himachal Pradesh')),
-('Kangra', (SELECT id FROM states WHERE name = 'Himachal Pradesh')),
-('Ranchi', (SELECT id FROM states WHERE name = 'Jharkhand')),
-('Dhanbad', (SELECT id FROM states WHERE name = 'Jharkhand')),
-('Bengaluru Urban', (SELECT id FROM states WHERE name = 'Karnataka')),
-('Mysuru', (SELECT id FROM states WHERE name = 'Karnataka')),
-('Ernakulam', (SELECT id FROM states WHERE name = 'Kerala')),
-('Thiruvananthapuram', (SELECT id FROM states WHERE name = 'Kerala')),
-('Indore', (SELECT id FROM states WHERE name = 'Madhya Pradesh')),
-('Bhopal', (SELECT id FROM states WHERE name = 'Madhya Pradesh')),
-('Mumbai', (SELECT id FROM states WHERE name = 'Maharashtra')),
-('Pune', (SELECT id FROM states WHERE name = 'Maharashtra')),
-('Imphal', (SELECT id FROM states WHERE name = 'Manipur')),
-('Shillong', (SELECT id FROM states WHERE name = 'Meghalaya')),
-('Aizawl', (SELECT id FROM states WHERE name = 'Mizoram')),
-('Kohima', (SELECT id FROM states WHERE name = 'Nagaland')),
-('Bhubaneswar', (SELECT id FROM states WHERE name = 'Odisha')),
-('Cuttack', (SELECT id FROM states WHERE name = 'Odisha')),
-('Amritsar', (SELECT id FROM states WHERE name = 'Punjab')),
-('Ludhiana', (SELECT id FROM states WHERE name = 'Punjab')),
-('Jaipur', (SELECT id FROM states WHERE name = 'Rajasthan')),
-('Udaipur', (SELECT id FROM states WHERE name = 'Rajasthan')),
-('Gangtok', (SELECT id FROM states WHERE name = 'Sikkim')),
-('Chennai', (SELECT id FROM states WHERE name = 'Tamil Nadu')),
-('Coimbatore', (SELECT id FROM states WHERE name = 'Tamil Nadu')),
-('Agartala', (SELECT id FROM states WHERE name = 'Tripura')),
-('Lucknow', (SELECT id FROM states WHERE name = 'Uttar Pradesh')),
-('Varanasi', (SELECT id FROM states WHERE name = 'Uttar Pradesh')),
-('Dehradun', (SELECT id FROM states WHERE name = 'Uttarakhand')),
-('Kolkata', (SELECT id FROM states WHERE name = 'West Bengal')),
-('Darjeeling', (SELECT id FROM states WHERE name = 'West Bengal'))
-('Jogulamba Gadwal', (SELECT id FROM states WHERE name = 'Telangana')),
-('Kamareddy', (SELECT id FROM states WHERE name = 'Telangana')),
-('Karimnagar', (SELECT id FROM states WHERE name = 'Telangana')),
-('Khammam', (SELECT id FROM states WHERE name = 'Telangana')),
-('Kumuram Bheem Asifabad', (SELECT id FROM states WHERE name = 'Telangana')),
-('Mahabubabad', (SELECT id FROM states WHERE name = 'Telangana')),
-('Mahabubnagar', (SELECT id FROM states WHERE name = 'Telangana')),
-('Mancherial', (SELECT id FROM states WHERE name = 'Telangana')),
-('Medak', (SELECT id FROM states WHERE name = 'Telangana')),
-('Medchal–Malkajgiri', (SELECT id FROM states WHERE name = 'Telangana')),
-('Mulugu', (SELECT id FROM states WHERE name = 'Telangana')),
-('Nagarkurnool', (SELECT id FROM states WHERE name = 'Telangana')),
-('Nalgonda', (SELECT id FROM states WHERE name = 'Telangana')),
-('Narayanpet', (SELECT id FROM states WHERE name = 'Telangana')),
-('Nirmal', (SELECT id FROM states WHERE name = 'Telangana')),
-('Nizamabad', (SELECT id FROM states WHERE name = 'Telangana')),
-('Peddapalli', (SELECT id FROM states WHERE name = 'Telangana')),
-('Rajanna Sircilla', (SELECT id FROM states WHERE name = 'Telangana')),
-('Ranga Reddy', (SELECT id FROM states WHERE name = 'Telangana')),
-('Sangareddy', (SELECT id FROM states WHERE name = 'Telangana')),
-('Siddipet', (SELECT id FROM states WHERE name = 'Telangana')),
-('Suryapet', (SELECT id FROM states WHERE name = 'Telangana')),
-('Vikarabad', (SELECT id FROM states WHERE name = 'Telangana')),
-('Wanaparthy', (SELECT id FROM states WHERE name = 'Telangana')),
-('Warangal Rural', (SELECT id FROM states WHERE name = 'Telangana')),
-('Warangal Urban', (SELECT id FROM states WHERE name = 'Telangana')),
-('Yadadri Bhuvanagiri', (SELECT id FROM states WHERE name = 'Telangana'));
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Tawang', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('West Kameng', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('East Kameng', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Pakke Kessang', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Papum Pare', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Kurung Kumey', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Kra Daadi', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Lower Subansiri', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Upper Subansiri', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('West Siang', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Shi-Yomi', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('East Siang', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Siang', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Upper Siang', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Lower Siang', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Lepa Rada', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Lower Dibang Valley', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Dibang Valley', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Anjaw', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Lohit', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Namsai', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Changlang', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Tirap', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW()),
+    ('Longding', (SELECT id FROM states WHERE state_name = 'Arunachal Pradesh'), 1, NOW());
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Balod', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Baloda Bazar', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Balrampur', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Bastar', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Bemetara', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Bijapur', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Bilaspur', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Dantewada', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Dhamtari', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Durg', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Gariaband', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Janjgir-Champa', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Jashpur', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Kabirdham', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Kanker', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Kondagaon', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Korba', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Koriya', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Mahasamund', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Mungeli', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Narayanpur', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Raigarh', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Raipur', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Rajnandgaon', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Sukma', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Surajpur', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW()),
+    ('Surguja', (SELECT id FROM states WHERE state_name = 'Chhattisgarh'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('North Goa', (SELECT id FROM states WHERE state_name = 'Goa'), 1, NOW()),
+    ('South Goa', (SELECT id FROM states WHERE state_name = 'Goa'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Ahmedabad', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Amreli', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Anand', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Aravalli', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Banaskantha', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Bharuch', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Bhavnagar', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Botad', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Chhota Udaipur', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Dahod', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Dang', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Devbhoomi Dwarka', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Gandhinagar', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Gir Somnath', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Jamnagar', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Junagadh', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Kheda', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Kutch', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Mahisagar', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Mehsana', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Morbi', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Narmada', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Navsari', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Panchmahal', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Patan', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Porbandar', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Rajkot', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Sabarkantha', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Surat', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Surendranagar', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Tapi', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Vadodara', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW()),
+    ('Valsad', (SELECT id FROM states WHERE state_name = 'Gujarat'), 1, NOW());
+
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Ambala', (SELECT id FROM states WHERE state_name = 'Haryana'), 1, NOW()),
+    ('Bhiwani', (SELECT id FROM states WHERE state_name = 'Haryana'), 1, NOW()),
+    ('Charkhi Dadri', (SELECT id FROM states WHERE state_name = 'Haryana'), 1, NOW()),
+    ('Faridabad', (SELECT id FROM states WHERE state_name = 'Haryana'), 1, NOW()),
+    ('Fatehabad', (SELECT id FROM states WHERE state_name = 'Haryana'), 1, NOW()),
+    ('Gurugram', (SELECT id FROM states WHERE state_name = 'Haryana'), 1, NOW()),
+    ('Hisar', (SELECT id FROM states WHERE state_name = 'Haryana'), 1, NOW()),
+    ('Jhajjar', (SELECT id FROM states WHERE state_name = 'Haryana'), 1, NOW()),
+    ('Jind', (SELECT id FROM states WHERE state_name = 'Haryana'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Bilaspur', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW()),
+    ('Chamba', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW()),
+    ('Hamirpur', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW()),
+    ('Kangra', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW()),
+    ('Kinnaur', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW()),
+    ('Kullu', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW()),
+    ('Lahaul and Spiti', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW()),
+    ('Mandi', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW()),
+    ('Shimla', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW()),
+    ('Sirmaur', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW()),
+    ('Solan', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW()),
+    ('Una', (SELECT id FROM states WHERE state_name = 'Himachal Pradesh'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Bokaro', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Chatra', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Deoghar', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Dhanbad', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Dumka', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('East Singhbhum', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Garhwa', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Giridih', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Godda', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Gumla', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Hazaribagh', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Jamtara', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Khunti', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Koderma', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Latehar', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Lohardaga', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Pakur', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Palamu', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Ramgarh', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Ranchi', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Sahibganj', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Seraikela Kharsawan', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('Simdega', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW()),
+    ('West Singhbhum', (SELECT id FROM states WHERE state_name = 'Jharkhand'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Bagalkot', (SELECT id FROM states WHERE state_name = 'Karnataka'), 1, NOW()),
+    ('Ballari', (SELECT id FROM states WHERE state_name = 'Karnataka'), 1, NOW()),
+    ('Belagavi', (SELECT id FROM states WHERE state_name = 'Karnataka'), 1, NOW()),
+    ('Bengaluru Rural', (SELECT id FROM states WHERE state_name = 'Karnataka'), 1, NOW()),
+    ('Bengaluru Urban', (SELECT id FROM states WHERE state_name = 'Karnataka'), 1, NOW()),
+    ('Bidar', (SELECT id FROM states WHERE state_name = 'Karnataka'), 1, NOW()),
+    ('Chikkamagaluru', (SELECT id FROM states WHERE state_name = 'Karnataka'), 1, NOW()),
+    ('Davanagere', (SELECT id FROM states WHERE state_name = 'Karnataka'), 1, NOW()),
+    ('Dharwad', (SELECT id FROM states WHERE state_name = 'Karnataka'), 1, NOW()),
+    ('Mysuru', (SELECT id FROM states WHERE state_name = 'Karnataka'), 1, NOW());
+
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Alappuzha', (SELECT id FROM states WHERE state_name = 'Kerala'), 1, NOW()),
+    ('Ernakulam', (SELECT id FROM states WHERE state_name = 'Kerala'), 1, NOW()),
+    ('Idukki', (SELECT id FROM states WHERE state_name = 'Kerala'), 1, NOW()),
+    ('Kannur', (SELECT id FROM states WHERE state_name = 'Kerala'), 1, NOW()),
+    ('Kasaragod', (SELECT id FROM states WHERE state_name = 'Kerala'), 1, NOW()),
+    ('Kollam', (SELECT id FROM states WHERE state_name = 'Kerala'), 1, NOW()),
+    ('Kottayam', (SELECT id FROM states WHERE state_name = 'Kerala'), 1, NOW()),
+    ('Kozhikode', (SELECT id FROM states WHERE state_name = 'Kerala'), 1, NOW());
+
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Bishnupur', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Chandel', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Churachandpur', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Imphal East', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Imphal West', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Jiribam', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Kakching', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Kamjong', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Kangpokpi', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Noney', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Pherzawl', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Senapati', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Tamenglong', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Tengnoupal', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Thoubal', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW()),
+    ('Ukhrul', (SELECT id FROM states WHERE state_name = 'Manipur'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('East Garo Hills', (SELECT id FROM states WHERE state_name = 'Meghalaya'), 1, NOW()),
+    ('East Jaintia Hills', (SELECT id FROM states WHERE state_name = 'Meghalaya'), 1, NOW()),
+    ('East Khasi Hills', (SELECT id FROM states WHERE state_name = 'Meghalaya'), 1, NOW()),
+    ('North Garo Hills', (SELECT id FROM states WHERE state_name = 'Meghalaya'), 1, NOW()),
+    ('Ri-Bhoi', (SELECT id FROM states WHERE state_name = 'Meghalaya'), 1, NOW()),
+    ('South Garo Hills', (SELECT id FROM states WHERE state_name = 'Meghalaya'), 1, NOW()),
+    ('South West Garo Hills', (SELECT id FROM states WHERE state_name = 'Meghalaya'), 1, NOW()),
+    ('South West Khasi Hills', (SELECT id FROM states WHERE state_name = 'Meghalaya'), 1, NOW()),
+    ('West Garo Hills', (SELECT id FROM states WHERE state_name = 'Meghalaya'), 1, NOW()),
+    ('West Jaintia Hills', (SELECT id FROM states WHERE state_name = 'Meghalaya'), 1, NOW()),
+    ('West Khasi Hills', (SELECT id FROM states WHERE state_name = 'Meghalaya'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Dimapur', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Kiphire', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Kohima', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Longleng', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Mokokchung', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Mon', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Peren', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Phek', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Tuensang', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Wokha', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Zunheboto', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Ariyalur', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Chengalpattu', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Chennai', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Coimbatore', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Cuddalore', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Dharmapuri', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Dindigul', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Erode', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Kallakurichi', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Kancheepuram', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Kanyakumari', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Karur', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Krishnagiri', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Madurai', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Nagapattinam', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Namakkal', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Perambalur', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Pudukkottai', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Ramanathapuram', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Salem', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Sivaganga', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Thanjavur', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Theni', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Thoothukudi', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Tiruchirappalli', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Tirunelveli', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Tirupathur', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Tiruppur', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Tiruvallur', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Tiruvannamalai', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Tiruvarur', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Vellore', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Viluppuram', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW()),
+    ('Virudhunagar', (SELECT id FROM states WHERE state_name = 'Tamil Nadu'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Adilabad', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Bhadradri Kothagudem', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Hyderabad', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Jagtial', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Jangaon', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Jayashankar Bhupalpally', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Jogulamba Gadwal', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Kamareddy', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Karimnagar', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Khammam', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Komaram Bheem Asifabad', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Mahabubabad', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Mahbubnagar', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Mancherial', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Medak', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Medchal-Malkajgiri', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Nagarkurnool', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Nalgonda', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Nirmal', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Nizamabad', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Peddapalli', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Rajanna Sircilla', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Rangareddy', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Sangareddy', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Siddipet', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Suryapet', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Vikarabad', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Wanaparthy', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Warangal Rural', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Warangal Urban', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW()),
+    ('Yadadri Bhuvanagiri', (SELECT id FROM states WHERE state_name = 'Telangana'), 1, NOW());
+
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Dimapur', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Kiphire', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Kohima', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Longleng', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Mokokchung', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Mon', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Peren', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Phek', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Tuensang', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Wokha', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW()),
+    ('Zunheboto', (SELECT id FROM states WHERE state_name = 'Nagaland'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Angul', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Balangir', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Balasore', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Bargarh', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Bhadrak', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Boudh', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Cuttack', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Debagarh', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Dhenkanal', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Gajapati', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Ganjam', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Jagatsinghpur', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Jajpur', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Jharsuguda', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Kalahandi', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Kandhamal', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Kendrapara', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Kendujhar', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Khordha', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Koraput', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Malkangiri', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Mayurbhanj', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Nabarangpur', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Nayagarh', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Nuapada', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Puri', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Rayagada', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Sambalpur', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Subarnapur', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW()),
+    ('Sundargarh', (SELECT id FROM states WHERE state_name = 'Odisha'), 1, NOW());
+
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Amritsar', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Barnala', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Bathinda', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Faridkot', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Fatehgarh Sahib', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Fazilka', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Ferozepur', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Gurdaspur', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Hoshiarpur', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Jalandhar', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Kapurthala', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Ludhiana', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Mansa', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Moga', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Muktsar', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Pathankot', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Patiala', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Rupnagar', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Sangrur', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('SAS Nagar', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Shahid Bhagat Singh Nagar', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Sri Muktsar Sahib', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW()),
+    ('Tarn Taran', (SELECT id FROM states WHERE state_name = 'Punjab'), 1, NOW());
+
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Ajmer', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Alwar', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Banswara', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Baran', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Barmer', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Bharatpur', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Bhilwara', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Bikaner', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Bundi', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Chittorgarh', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Churu', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Dausa', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Dholpur', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Dungarpur', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Hanumangarh', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Jaipur', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Jaisalmer', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Jalore', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Jhalawar', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Jhunjhunu', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Jodhpur', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Karauli', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Kota', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Nagaur', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Pali', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Pratapgarh', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Rajsamand', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Sawai Madhopur', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Sikar', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Sirohi', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Sri Ganganagar', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Tonk', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW()),
+    ('Udaipur', (SELECT id FROM states WHERE state_name = 'Rajasthan'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('East Sikkim', (SELECT id FROM states WHERE state_name = 'Sikkim'), 1, NOW()),
+    ('North Sikkim', (SELECT id FROM states WHERE state_name = 'Sikkim'), 1, NOW()),
+    ('South Sikkim', (SELECT id FROM states WHERE state_name = 'Sikkim'), 1, NOW()),
+    ('West Sikkim', (SELECT id FROM states WHERE state_name = 'Sikkim'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Dhalai', (SELECT id FROM states WHERE state_name = 'Tripura'), 1, NOW()),
+    ('Gomati', (SELECT id FROM states WHERE state_name = 'Tripura'), 1, NOW()),
+    ('Khowai', (SELECT id FROM states WHERE state_name = 'Tripura'), 1, NOW()),
+    ('North Tripura', (SELECT id FROM states WHERE state_name = 'Tripura'), 1, NOW()),
+    ('Sepahijala', (SELECT id FROM states WHERE state_name = 'Tripura'), 1, NOW()),
+    ('South Tripura', (SELECT id FROM states WHERE state_name = 'Tripura'), 1, NOW()),
+    ('Unakoti', (SELECT id FROM states WHERE state_name = 'Tripura'), 1, NOW()),
+    ('West Tripura', (SELECT id FROM states WHERE state_name = 'Tripura'), 1, NOW());
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Agra', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Aligarh', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Ambedkar Nagar', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Amethi', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Amroha', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Auraiya', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Ayodhya', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Azamgarh', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Baghpat', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Bahraich', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Ballia', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Balrampur', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Banda', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Barabanki', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Bareilly', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Basti', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Bhadohi', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Bijnor', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Budaun', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Bulandshahr', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Chandauli', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Chitrakoot', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Deoria', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Etah', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Etawah', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Farrukhabad', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Fatehpur', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Firozabad', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Gautam Buddh Nagar', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Ghaziabad', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Ghazipur', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Gonda', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Gorakhpur', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Hamirpur', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Hapur', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Hardoi', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Hathras', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Jalaun', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Jaunpur', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Jhansi', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Kannauj', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Kanpur Dehat', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Kanpur Nagar', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Kasganj', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Kaushambi', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Kushinagar', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Lakhimpur Kheri', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Lalitpur', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW()),
+    ('Lucknow', (SELECT id FROM states WHERE state_name = 'Uttar Pradesh'), 1, NOW());
+
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Almora', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Bageshwar', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Chamoli', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Champawat', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Dehradun', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Haridwar', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Nainital', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Pauri Garhwal', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Pithoragarh', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Rudraprayag', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Tehri Garhwal', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Udham Singh Nagar', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW()),
+    ('Uttarkashi', (SELECT id FROM states WHERE state_name = 'Uttarakhand'), 1, NOW());
+
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Alipurduar', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Bankura', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Birbhum', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Cooch Behar', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Dakshin Dinajpur', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Darjeeling', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Hooghly', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Howrah', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Jalpaiguri', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Jhargram', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Kalimpong', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Kolkata', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Malda', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Murshidabad', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Nadia', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('North 24 Parganas', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Paschim Bardhaman', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Paschim Medinipur', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Purba Bardhaman', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Purba Medinipur', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Purulia', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('South 24 Parganas', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW()),
+    ('Uttar Dinajpur', (SELECT id FROM states WHERE state_name = 'West Bengal'), 1, NOW());
+
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Agar Malwa', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Alirajpur', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Anuppur', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Ashoknagar', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Balaghat', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Barwani', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Betul', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Bhind', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Bhopal', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Chhatarpur', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Chhindwara', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Damoh', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Datia', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Dewas', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Dhar', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Guna', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Gwalior', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW()),
+    ('Indore', (SELECT id FROM states WHERE state_name = 'Madhya Pradesh'), 1, NOW());
+
+
+
+INSERT INTO districts (district_name, state_id, created_by, created_at)
+VALUES
+    ('Ahmednagar', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Akola', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Amravati', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Aurangabad', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Beed', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Bhandara', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Buldhana', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Chandrapur', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Dhule', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Gadchiroli', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Gondia', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Hingoli', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Jalgaon', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Jalna', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Kolhapur', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Latur', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Mumbai City', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Mumbai Suburban', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Nagpur', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Nanded', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Nashik', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Palghar', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Pune', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Raigad', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
+    ('Satara', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW());
+
+
+
