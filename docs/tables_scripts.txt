@@ -5,6 +5,8 @@ CREATE TABLE users (
     last_name VARCHAR(30),
     password VARCHAR(150),
     status INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
+    state INTEGER REFERENCES states(id) ON DELETE CASCADE,
+    district INTEGER REFERENCES districts(id) ON DELETE CASCADE,
     role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
     created_time TIMESTAMP,
     updated_time TIMESTAMP,

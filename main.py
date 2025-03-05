@@ -13,6 +13,7 @@ from src.routers.crops_router import router as crops_router
 from src.routers.soil_router import router as soil_router
 from src.routers.farmer_inventory_router import router as farmer_inventory_router
 from src.routers.locations_router import router as location_router
+from src.routers.market_router import router as market_router
 from src.db_connections.mongo_conn import close_mongo_connection
 
 
@@ -45,6 +46,7 @@ smart_agri_tech_app.include_router(crops_router)
 smart_agri_tech_app.include_router(soil_router)
 smart_agri_tech_app.include_router(farmer_inventory_router)
 smart_agri_tech_app.include_router(location_router)
+smart_agri_tech_app.include_router(market_router)
 
  
 smart_agri_tech_app.add_middleware(
