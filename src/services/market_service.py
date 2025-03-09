@@ -5,6 +5,10 @@ from src.data_models.farmer_inventory_model import FarmerInventory
 from src.data_models.users_model import Users
 from src.data_models.states_model import States
 from src.data_models.districts_model import Districts
+from src.data_models.crops_model import Crops
+from src.data_models.soil_model import Soil
+from src.data_models.fertilizers_model import Fertilizers
+
 from datetime import datetime
 
 class MarketService:
@@ -21,9 +25,21 @@ class MarketService:
                 user_district = db.query(Districts).filter(
                     States.id==user_details.district
                     ).first()
+                crop_data = db.query(Crops).filter(
+                    Crops.id==data.crop
+                    ).first()
+                soil_data = db.query(Soil).filter(
+                    Soil.id==data.soil
+                    ).first()
+                fertilizer_data = db.query(Fertilizers).filter(
+                    Fertilizers.id==data.fertilizer
+                    ).first()
                 data.farmer_name = user_details.first_name + user_details.last_name if user_details else None
                 data.state = user_state.state_name if user_state else None
                 data.district = user_district.district_name if user_district else None
+                data.crop_name = crop_data.crop_name if crop_data else None
+                data.soil_name = soil_data.soil_name if soil_data else None
+                data.fertilizer_name = fertilizer_data.fertilizer_name if fertilizer_data else None
             return market_data
         except Exception as e:
             db.rollback()
