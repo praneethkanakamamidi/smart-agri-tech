@@ -2,24 +2,77 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from src.data_models.orders_model import Orders
+from src.data_models.farmer_inventory_model import FarmerInventory
 from src.data_models.users_model import Users
 from src.data_models.miscellaneous_model import Miscellaneous_Data
 from datetime import datetime
+from decimal import Decimal
+
+
 
 class OrdersService:
-    def post_order(self, payload, db:Session):
+    def post_order(self, payload, db: Session):
         try:
-            return {"message": f"Order has been successfully placed"}
+            pending_status = db.query(Miscellaneous_Data).filter(
+                Miscellaneous_Data.category == "order_status",
+                Miscellaneous_Data.value == "pending"
+            ).first()
+            if not pending_status:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Order status 'pending' not found in database"
+                )
+            inventory_data = db.query(FarmerInventory).filter(
+                FarmerInventory.id == payload.stock_id
+            ).first()
+            if not inventory_data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Error: Inventory with the given ID not found"
+                )
+            if payload.quantity > inventory_data.weight_kg:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Order quantity ({payload.quantity} kg) exceeds available stock ({inventory_data.weight_kg} kg). Please reduce the quantity."
+                )
+            total_price = Decimal(payload.quantity) * Decimal(inventory_data.proposed_cost)
+            new_order = Orders(
+                farmer_inventory_id=inventory_data.id,
+                vendor_id=payload.vendor_id,
+                farmer_id=inventory_data.created_by,
+                quantity_kg=payload.quantity,
+                total_price=total_price,
+                status=pending_status.id,
+                created_at=datetime.utcnow()
+            )
+            db.add(new_order)
+            db.flush()
+            if not new_order.id:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to place order. Please try again."
+                )
+            inventory_data.weight_kg -= payload.quantity
+            db.commit()
+            return {"success": "Order has been placed successfully"}
+        except HTTPException as e:
+            db.rollback()
+            raise e
         except Exception as e:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An error occurred: {str(e)}"
+                detail=f"An unexpected error occurred: {str(e)}"
             )
+        finally:
+            db.close()
         
     def get_vendor_orders(self, id, db: Session) -> list:
         try:
-            return "true"
+            vendor_order_data = db.query(Orders).filter(
+                Orders.vendor_id==id
+            ).all()
+            return vendor_order_data
         except Exception as e:
             db.rollback()
             raise HTTPException(
@@ -27,9 +80,12 @@ class OrdersService:
                 detail=f"An error occurred: {str(e)}"
             )
     
-    def get_farmer_orders(self, db: Session) -> list:
+    def get_farmer_orders(self, id, db: Session) -> list:
         try:
-            return "fetched"
+            farmer_order_data = db.query(Orders).filter(
+                Orders.farmer_id==id
+            ).all()
+            return farmer_order_data
         except Exception as e:
             db.rollback()
             raise HTTPException(
@@ -39,7 +95,24 @@ class OrdersService:
 
     def order_status(self, payload, db:Session):
         try:
-            return  {"message": f"order status has been changed"}
+            order_status_data  = db.query(Miscellaneous_Data).filter(
+                Miscellaneous_Data.category == "order_status",
+                Miscellaneous_Data.value == payload.status
+            ).first()
+            if not order_status_data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Order status '{payload.status}' not found."
+                )
+            order_data = db.query(Orders).filter(Orders.id == payload.order_id).first()
+            if not order_data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Order with ID {payload.order_id} not found."
+                )
+            order_data.status = order_status_data.id
+            db.commit()
+            return {"message": f"Order status has been changed to '{payload.status}'"}
         except Exception as e:
             db.rollback()
             raise HTTPException(

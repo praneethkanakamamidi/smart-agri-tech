@@ -4,7 +4,7 @@ from src.db_connections.postgresql_conn import Base
 class Transactions(Base):
     __tablename__ = "transactions"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(Integer, ForeignKey('orders.id', ondelete='CASCADE'))
     razorpay_order_id = Column(String, nullable=False, unique=True)
     razorpay_payment_id = Column(String, nullable=True, unique=True)

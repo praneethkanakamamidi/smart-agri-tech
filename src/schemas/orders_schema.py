@@ -3,9 +3,11 @@ from datetime import datetime
 from typing import List
 
 class PostOrderSchema(BaseModel):
-    stock_id :int =None
-    amount:int = None
+    stock_id:int=None
+    vendor_id:int=None
+    quantity:int=None
 
 class UpdateOrderStatus(BaseModel):
-    order_id: int = None
-    user_id: int = None
+    order_id:int=None
+    status:str=None
+    user_id:int=None
