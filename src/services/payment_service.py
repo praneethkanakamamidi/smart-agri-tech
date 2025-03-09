@@ -9,7 +9,7 @@ from src.data_models.transactions_model import Transactions
 from src.data_models.miscellaneous_model import Miscellaneous_Data
 
 
-class OrdersService:
+class PaymentsService:
     def __init__(self):
         self.razorpay_client = razorpay.Client(
             auth=(
