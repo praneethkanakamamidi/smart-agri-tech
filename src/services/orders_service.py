@@ -119,9 +119,9 @@ class OrdersService:
                 detail=f"An error occurred: {str(e)}"
             )
 
-    def order_status(self, payload, db:Session):
+    def order_status(self, payload, db: Session):
         try:
-            order_status_data  = db.query(Miscellaneous_Data).filter(
+            order_status_data = db.query(Miscellaneous_Data).filter(
                 Miscellaneous_Data.category == "order_status",
                 Miscellaneous_Data.value == payload.status
             ).first()
@@ -136,13 +136,22 @@ class OrdersService:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Order with ID {payload.order_id} not found."
                 )
+            if payload.status.lower() == "rejected":
+                inventory_data = db.query(FarmerInventory).filter(
+                    FarmerInventory.id == order_data.farmer_inventory
+                ).first()
+                if inventory_data:
+                    inventory_data.weight_kg += order_data.quantity_kg
+                    db.commit()
             order_data.status = order_status_data.id
             db.commit()
             return {"message": f"Order status has been changed to '{payload.status}'"}
+        except HTTPException as e:
+            db.rollback()
+            raise e
         except Exception as e:
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"An error occurred: {str(e)}"
             )
-            
