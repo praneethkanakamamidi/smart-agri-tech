@@ -3,6 +3,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from src.data_models.orders_model import Orders
 from src.data_models.farmer_inventory_model import FarmerInventory
+from src.data_models.crops_model import Crops
+from src.data_models.soil_model import Soil
+from src.data_models.fertilizers_model import Fertilizers
 from src.data_models.users_model import Users
 from src.data_models.miscellaneous_model import Miscellaneous_Data
 from datetime import datetime
@@ -37,8 +40,8 @@ class OrdersService:
                 )
             total_price = Decimal(payload.quantity) * Decimal(inventory_data.proposed_cost)
             new_order = Orders(
-                farmer_inventory_id=inventory_data.id,
-                vendor_id=payload.vendor_id,
+                farmer_inventory=inventory_data.id,
+                vendor=payload.vendor,
                 farmer_id=inventory_data.created_by,
                 quantity_kg=payload.quantity,
                 total_price=total_price,
@@ -70,9 +73,21 @@ class OrdersService:
     def get_vendor_orders(self, id, db: Session) -> list:
         try:
             vendor_order_data = db.query(Orders).filter(
-                Orders.vendor_id==id
+                Orders.vendor==id
             ).all()
+            for data in vendor_order_data:
+                inventory_data = db.query(FarmerInventory).filter(FarmerInventory.id==data.farmer_inventory).first()
+                if inventory_data:
+                    crop_data =  db.query(Crops).filter(Crops.id==inventory_data.crop).first()
+                    soil_data =  db.query(Soil).filter(Soil.id==inventory_data.soil).first()
+                    fertilizer_data = db.query(Fertilizers).filter(Fertilizers.id==inventory_data.fertilizer).first()
+                user_data = db.query(Users).filter(Users.id==data.vendor).first()
+                data.crop_name = crop_data.crop_name if crop_data else None
+                data.soil_name = soil_data.soil_name if soil_data else None
+                data.fertilizer_name = fertilizer_data.fertilizer_name if fertilizer_data else None
+                data.username = user_data.first_name + " " + user_data.last_name if user_data else None
             return vendor_order_data
+
         except Exception as e:
             db.rollback()
             raise HTTPException(
@@ -83,8 +98,19 @@ class OrdersService:
     def get_farmer_orders(self, id, db: Session) -> list:
         try:
             farmer_order_data = db.query(Orders).filter(
-                Orders.farmer_id==id
+                Orders.farmer==id
             ).all()
+            for data in farmer_order_data:
+                inventory_data = db.query(FarmerInventory).filter(FarmerInventory.id==data.farmer_inventory).first()
+                if inventory_data:
+                    crop_data =  db.query(Crops).filter(Crops.id==inventory_data.crop).first()
+                    soil_data =  db.query(Soil).filter(Soil.id==inventory_data.soil).first()
+                    fertilizer_data = db.query(Fertilizers).filter(Fertilizers.id==inventory_data.fertilizer).first()
+                user_data = db.query(Users).filter(Users.id==data.vendor).first()
+                data.crop_name = crop_data.crop_name if crop_data else None
+                data.soil_name = soil_data.soil_name if soil_data else None
+                data.fertilizer_name = fertilizer_data.fertilizer_name if fertilizer_data else None
+                data.username = user_data.first_name + " " + user_data.last_name if user_data else None
             return farmer_order_data
         except Exception as e:
             db.rollback()

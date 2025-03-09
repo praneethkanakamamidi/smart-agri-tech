@@ -4,7 +4,7 @@ from typing import List
 
 class PostOrderSchema(BaseModel):
     stock_id:int=None
-    vendor_id:int=None
+    vendor:int=None
     quantity:int=None
 
 class UpdateOrderStatus(BaseModel):

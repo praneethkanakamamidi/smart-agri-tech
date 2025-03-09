@@ -779,9 +779,9 @@ VALUES
 
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
-    farmer_inventory_id INTEGER REFERENCES farmer_inventory(id) ON DELETE CASCADE,
-    vendor_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    farmer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    farmer_inventory INTEGER REFERENCES farmer_inventory(id) ON DELETE CASCADE,
+    vendor INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    farmer INTEGER REFERENCES users(id) ON DELETE CASCADE,
     quantity_kg FLOAT,
     total_price INTEGER,
     status INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
