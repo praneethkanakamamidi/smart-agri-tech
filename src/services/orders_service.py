@@ -42,7 +42,7 @@ class OrdersService:
             new_order = Orders(
                 farmer_inventory=inventory_data.id,
                 vendor=payload.vendor,
-                farmer_id=inventory_data.created_by,
+                farmer=inventory_data.created_by,
                 quantity_kg=payload.quantity,
                 total_price=total_price,
                 status=pending_status.id,
@@ -85,7 +85,7 @@ class OrdersService:
                 data.crop_name = crop_data.crop_name if crop_data else None
                 data.soil_name = soil_data.soil_name if soil_data else None
                 data.fertilizer_name = fertilizer_data.fertilizer_name if fertilizer_data else None
-                data.username = user_data.first_name + " " + user_data.last_name if user_data else None
+                data.farmer_name = user_data.first_name + " " + user_data.last_name if user_data else None
             return vendor_order_data
 
         except Exception as e:
@@ -110,7 +110,7 @@ class OrdersService:
                 data.crop_name = crop_data.crop_name if crop_data else None
                 data.soil_name = soil_data.soil_name if soil_data else None
                 data.fertilizer_name = fertilizer_data.fertilizer_name if fertilizer_data else None
-                data.username = user_data.first_name + " " + user_data.last_name if user_data else None
+                data.vendor_name = user_data.first_name + " " + user_data.last_name if user_data else None
             return farmer_order_data
         except Exception as e:
             db.rollback()
