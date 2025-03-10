@@ -14,3 +14,7 @@ class SMTPSettings(BaseSettings):
     EMAIL_SENDER_PASSWORD: str
     EMAIL_SMTP_SERVER: str
     EMAIL_SMTP_PORT: int
+
+class RazorPaySettings(BaseSettings):
+    RAZORPAY_KEY_ID: str
+    RAZORPAY_KEY_SECRET: str

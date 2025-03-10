@@ -777,5 +777,26 @@ VALUES
     ('Raigad', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW()),
     ('Satara', (SELECT id FROM states WHERE state_name = 'Maharashtra'), 1, NOW());
 
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    farmer_inventory INTEGER REFERENCES farmer_inventory(id) ON DELETE CASCADE,
+    vendor INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    farmer INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    quantity_kg FLOAT,
+    total_price INTEGER,
+    status INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
 
-
+CREATE TABLE transactions (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+    razorpay_order_id VARCHAR NOT NULL UNIQUE,
+    razorpay_payment_id VARCHAR UNIQUE,
+    razorpay_signature VARCHAR,
+    amount_paid INTEGER NOT NULL,
+    currency VARCHAR,
+    status INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
+    created_at TIMESTAMP
+);
