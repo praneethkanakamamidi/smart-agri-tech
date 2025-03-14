@@ -7,6 +7,7 @@ from src.data_models.crops_model import Crops
 from src.data_models.soil_model import Soil
 from src.data_models.fertilizers_model import Fertilizers
 from src.data_models.users_model import Users
+from src.data_models.transactions_model import Transactions
 from src.data_models.miscellaneous_model import Miscellaneous_Data
 from datetime import datetime
 from decimal import Decimal
@@ -72,20 +73,28 @@ class OrdersService:
         
     def get_vendor_orders(self, id, db: Session) -> list:
         try:
-            vendor_order_data = db.query(Orders).filter(
-                Orders.vendor==id
-            ).all()
+            vendor_order_data = db.query(Orders).filter(Orders.vendor == id).all()
             for data in vendor_order_data:
-                inventory_data = db.query(FarmerInventory).filter(FarmerInventory.id==data.farmer_inventory).first()
+                payment_status_data = db.query(Transactions).filter(Transactions.order_id == data.id).first()
+                misc_payment_status_data = None
+                if payment_status_data:
+                    misc_payment_status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id == payment_status_data.status).first()
+                inventory_data = db.query(FarmerInventory).filter(FarmerInventory.id == data.farmer_inventory).first()
+
                 if inventory_data:
-                    crop_data =  db.query(Crops).filter(Crops.id==inventory_data.crop).first()
-                    soil_data =  db.query(Soil).filter(Soil.id==inventory_data.soil).first()
-                    fertilizer_data = db.query(Fertilizers).filter(Fertilizers.id==inventory_data.fertilizer).first()
-                user_data = db.query(Users).filter(Users.id==data.vendor).first()
+                    crop_data = db.query(Crops).filter(Crops.id == inventory_data.crop).first()
+                    soil_data = db.query(Soil).filter(Soil.id == inventory_data.soil).first()
+                    fertilizer_data = db.query(Fertilizers).filter(Fertilizers.id == inventory_data.fertilizer).first()
+                    order_status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id == data.status).first()
+
+                user_data = db.query(Users).filter(Users.id == data.vendor).first()
                 data.crop_name = crop_data.crop_name if crop_data else None
                 data.soil_name = soil_data.soil_name if soil_data else None
                 data.fertilizer_name = fertilizer_data.fertilizer_name if fertilizer_data else None
-                data.farmer_name = user_data.first_name + " " + user_data.last_name if user_data else None
+                data.farmer_name = f"{user_data.first_name} {user_data.last_name}" if user_data else None
+                data.order_status = order_status_data.value if order_status_data else None
+                data.payment_status = misc_payment_status_data.value if misc_payment_status_data else "pending"
+
             return vendor_order_data
 
         except Exception as e:
@@ -101,16 +110,25 @@ class OrdersService:
                 Orders.farmer==id
             ).all()
             for data in farmer_order_data:
+                misc_payment_status_data = None
+                payment_status_data = db.query(Transactions).filter(Transactions.order_id == data.id).first()
+                if payment_status_data:
+                    misc_payment_status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id == payment_status_data.status).first()
+
                 inventory_data = db.query(FarmerInventory).filter(FarmerInventory.id==data.farmer_inventory).first()
                 if inventory_data:
                     crop_data =  db.query(Crops).filter(Crops.id==inventory_data.crop).first()
                     soil_data =  db.query(Soil).filter(Soil.id==inventory_data.soil).first()
                     fertilizer_data = db.query(Fertilizers).filter(Fertilizers.id==inventory_data.fertilizer).first()
+                    order_status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id==data.status).first()
                 user_data = db.query(Users).filter(Users.id==data.vendor).first()
                 data.crop_name = crop_data.crop_name if crop_data else None
                 data.soil_name = soil_data.soil_name if soil_data else None
                 data.fertilizer_name = fertilizer_data.fertilizer_name if fertilizer_data else None
                 data.vendor_name = user_data.first_name + " " + user_data.last_name if user_data else None
+                data.order_status = order_status_data.value if order_status_data else None
+                data.payment_status = misc_payment_status_data.value if misc_payment_status_data else "pending"
+                
             return farmer_order_data
         except Exception as e:
             db.rollback()
