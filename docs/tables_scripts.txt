@@ -800,3 +800,11 @@ CREATE TABLE transactions (
     status INTEGER REFERENCES miscellaneous_data(id) ON DELETE CASCADE,
     created_at TIMESTAMP
 );
+
+
+
+
+CREATE INDEX idx_orders_vendor ON orders(vendor);
+CREATE INDEX idx_orders_farmer ON orders(farmer);
+CREATE INDEX idx_miscellaneous_data_id ON miscellaneous_data(id);
+CREATE INDEX idx_transactions_order_id ON transactions(order_id);
