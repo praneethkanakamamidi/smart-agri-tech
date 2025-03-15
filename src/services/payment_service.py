@@ -89,7 +89,7 @@ class PaymentsService:
             transaction.razorpay_signature = payload.razorpay_signature
             transaction.status = db.query(Miscellaneous_Data).filter(
                 Miscellaneous_Data.category == "payment_status",
-                Miscellaneous_Data.value == "completed"
+                Miscellaneous_Data.value == "paid"
             ).first().id
             db.commit()
             return {"success": True, "message": "Payment verified successfully"}

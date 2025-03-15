@@ -75,7 +75,7 @@ class OrdersService:
         try:
             vendor_order_data = db.query(Orders).filter(Orders.vendor == id).all()
             for data in vendor_order_data:
-                payment_status_data = db.query(Transactions).filter(Transactions.order_id == data.id).first()
+                payment_status_data = db.query(Transactions).filter(Transactions.order_id == data.id).order_by(Transactions.created_at.desc()).first()
                 misc_payment_status_data = None
                 if payment_status_data:
                     misc_payment_status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id == payment_status_data.status).first()
