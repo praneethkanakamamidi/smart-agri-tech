@@ -20,6 +20,7 @@ def get_farmer_payments_history(
     page_size: int = Query(10, alias="page_size", description="Number of records per page"),
     db: Session = Depends(get_db), 
     service: PaymentsHistory = Depends(payments_history_service),
+    user: Users = Depends(get_current_active_user)
 ):
     response = service.farmer_payments_history(id, db, page, page_size)
     return response
@@ -31,6 +32,7 @@ def get_vendor_payments_history(
     page_size: int = Query(10, alias="page_size", description="Number of records per page"),
     db: Session = Depends(get_db), 
     service: PaymentsHistory = Depends(payments_history_service),
+    user: Users = Depends(get_current_active_user)
 ):
     response = service.vendor_payments_history(id, db, page, page_size)
     return response
