@@ -19,7 +19,7 @@ class PaymentsHistory:
             total_records = (
                 db.query(func.count(Transactions.id))
                 .join(Orders, Transactions.order_id == Orders.id)
-                .filter(Orders.vendor == id)
+                .filter(Orders.farmer == id)
                 .scalar()
             )
 
@@ -52,7 +52,7 @@ class PaymentsHistory:
                 .join(FarmerInventory, Orders.farmer_inventory == FarmerInventory.id)
                 .join(crop, FarmerInventory.crop == crop.id)
                 .outerjoin(txn_status, Transactions.status == txn_status.id)
-                .filter(Orders.vendor == id)
+                .filter(Orders.farmer == id)
                 .limit(page_size)
                 .offset((page - 1) * page_size)
                 .all()
@@ -106,6 +106,7 @@ class PaymentsHistory:
 
             txn_status = aliased(Miscellaneous_Data)
             farmer = aliased(Users)
+            crop = aliased(Crops)
 
             transactions = (
                 db.query(
@@ -120,9 +121,12 @@ class PaymentsHistory:
                     Transactions.razorpay_payment_id,
                     farmer.first_name.label("farmer_first_name"),
                     farmer.last_name.label("farmer_last_name"),
+                    crop.crop_name.label("crop_name")
                 )
                 .join(Orders, Transactions.order_id == Orders.id)
                 .join(farmer, Orders.farmer == farmer.id)
+                .join(FarmerInventory, Orders.farmer_inventory == FarmerInventory.id)
+                .join(crop, FarmerInventory.crop == crop.id)
                 .outerjoin(txn_status, Transactions.status == txn_status.id)
                 .filter(Orders.vendor == id)
                 .limit(page_size)
@@ -142,6 +146,7 @@ class PaymentsHistory:
                     "razorpay_order_id": txn.razorpay_order_id,
                     "razorpay_payment_id": txn.razorpay_payment_id,
                     "farmer": f"{txn.farmer_first_name} {txn.farmer_last_name}" if txn.farmer_first_name else None,
+                    "crop_name": txn.crop_name
                 }
                 for txn in transactions
             ]
