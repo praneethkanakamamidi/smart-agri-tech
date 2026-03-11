@@ -21,3 +21,5 @@ pymongo
 motor
 pymango
 razorpay
+alembic
+python-dotenv
