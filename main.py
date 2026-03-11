@@ -14,6 +14,7 @@ from src.routers.soil_router import router as soil_router
 from src.routers.farmer_inventory_router import router as farmer_inventory_router
 from src.routers.locations_router import router as location_router
 from src.routers.market_router import router as market_router
+from src.routers.market_offers_router import router as market_offers_router
 from src.routers.orders_router import router as orders_router
 from src.routers.payment_router import router as payment_router
 from src.routers.payments_history_router import router as payments_history_router
@@ -50,6 +51,7 @@ smart_agri_tech_app.include_router(soil_router)
 smart_agri_tech_app.include_router(farmer_inventory_router)
 smart_agri_tech_app.include_router(location_router)
 smart_agri_tech_app.include_router(market_router)
+smart_agri_tech_app.include_router(market_offers_router)
 smart_agri_tech_app.include_router(orders_router)
 smart_agri_tech_app.include_router(payment_router)
 smart_agri_tech_app.include_router(payments_history_router)
