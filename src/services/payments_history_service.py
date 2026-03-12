@@ -1,30 +1,34 @@
-import razorpay
 from fastapi import HTTPException, status
+from sqlalchemy import select, func
 from sqlalchemy.orm import aliased
-from sqlalchemy.orm import Session
-from datetime import datetime
-from decimal import Decimal
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.data_models.orders_model import Orders
 from src.data_models.transactions_model import Transactions
 from src.data_models.users_model import Users
 from src.data_models.miscellaneous_model import Miscellaneous_Data
 from src.data_models.farmer_inventory_model import FarmerInventory
 from src.data_models.crops_model import Crops
-from sqlalchemy import func
 
 
 class PaymentsHistory:
-    def farmer_payments_history(self, id: int, db: Session, page: int = 1, page_size: int = 10):
+    async def farmer_payments_history(
+        self, id: int, db: AsyncSession, page: int = 1, page_size: int = 10
+    ):
         try:
-            total_records = (
-                db.query(func.count(Transactions.id))
+            count_stmt = (
+                select(func.count(Transactions.id))
+                .select_from(Transactions)
                 .join(Orders, Transactions.order_id == Orders.id)
-                .filter(Orders.farmer == id)
-                .scalar()
+                .where(Orders.farmer == id)
             )
+            res_count = await db.execute(count_stmt)
+            total_records = res_count.scalar() or 0
 
             if total_records == 0:
-                raise HTTPException(status_code=404, detail="No transactions found for this vendor.")
+                raise HTTPException(
+                    status_code=404, detail="No transactions found for this farmer."
+                )
 
             total_pages = (total_records + page_size - 1) // page_size
 
@@ -32,8 +36,8 @@ class PaymentsHistory:
             vendor = aliased(Users)
             crop = aliased(Crops)
 
-            transactions = (
-                db.query(
+            stmt = (
+                select(
                     Transactions.id.label("transaction_id"),
                     Transactions.order_id,
                     Transactions.amount_paid,
@@ -45,20 +49,22 @@ class PaymentsHistory:
                     Transactions.razorpay_payment_id,
                     vendor.first_name.label("vendor_first_name"),
                     vendor.last_name.label("vendor_last_name"),
-                    crop.crop_name.label("crop_name")
+                    crop.crop_name.label("crop_name"),
                 )
+                .select_from(Transactions)
                 .join(Orders, Transactions.order_id == Orders.id)
                 .join(vendor, Orders.vendor == vendor.id)
                 .join(FarmerInventory, Orders.farmer_inventory == FarmerInventory.id)
                 .join(crop, FarmerInventory.crop == crop.id)
                 .outerjoin(txn_status, Transactions.status == txn_status.id)
-                .filter(Orders.farmer == id)
+                .where(Orders.farmer == id)
                 .limit(page_size)
                 .offset((page - 1) * page_size)
-                .all()
             )
+            result = await db.execute(stmt)
+            transactions = result.all()
 
-            result = [
+            result_data = [
                 {
                     "transaction_id": txn.transaction_id,
                     "order_id": txn.order_id,
@@ -70,7 +76,7 @@ class PaymentsHistory:
                     "razorpay_order_id": txn.razorpay_order_id,
                     "razorpay_payment_id": txn.razorpay_payment_id,
                     "vendor": f"{txn.vendor_first_name} {txn.vendor_last_name}" if txn.vendor_first_name else None,
-                    "crop_name": txn.crop_name
+                    "crop_name": txn.crop_name,
                 }
                 for txn in transactions
             ]
@@ -80,27 +86,34 @@ class PaymentsHistory:
                 "page_size": page_size,
                 "total_records": total_records,
                 "total_pages": total_pages,
-                "data": result
+                "data": result_data,
             }
-
+        except HTTPException:
+            raise
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An unexpected error occurred: {str(e)}"
+                detail=f"An error occurred: {str(e)}",
             )
 
-    def vendor_payments_history(self, id: int, db: Session, page: int = 1, page_size: int = 10):
+    async def vendor_payments_history(
+        self, id: int, db: AsyncSession, page: int = 1, page_size: int = 10
+    ):
         try:
-            total_records = (
-                db.query(func.count(Transactions.id))
+            count_stmt = (
+                select(func.count(Transactions.id))
+                .select_from(Transactions)
                 .join(Orders, Transactions.order_id == Orders.id)
-                .filter(Orders.vendor == id)
-                .scalar()
+                .where(Orders.vendor == id)
             )
+            res_count = await db.execute(count_stmt)
+            total_records = res_count.scalar() or 0
 
             if total_records == 0:
-                raise HTTPException(status_code=404, detail="No transactions found for this vendor.")
+                raise HTTPException(
+                    status_code=404, detail="No transactions found for this vendor."
+                )
 
             total_pages = (total_records + page_size - 1) // page_size
 
@@ -108,8 +121,8 @@ class PaymentsHistory:
             farmer = aliased(Users)
             crop = aliased(Crops)
 
-            transactions = (
-                db.query(
+            stmt = (
+                select(
                     Transactions.id.label("transaction_id"),
                     Transactions.order_id,
                     Transactions.amount_paid,
@@ -121,20 +134,22 @@ class PaymentsHistory:
                     Transactions.razorpay_payment_id,
                     farmer.first_name.label("farmer_first_name"),
                     farmer.last_name.label("farmer_last_name"),
-                    crop.crop_name.label("crop_name")
+                    crop.crop_name.label("crop_name"),
                 )
+                .select_from(Transactions)
                 .join(Orders, Transactions.order_id == Orders.id)
                 .join(farmer, Orders.farmer == farmer.id)
                 .join(FarmerInventory, Orders.farmer_inventory == FarmerInventory.id)
                 .join(crop, FarmerInventory.crop == crop.id)
                 .outerjoin(txn_status, Transactions.status == txn_status.id)
-                .filter(Orders.vendor == id)
+                .where(Orders.vendor == id)
                 .limit(page_size)
                 .offset((page - 1) * page_size)
-                .all()
             )
+            result = await db.execute(stmt)
+            transactions = result.all()
 
-            result = [
+            result_data = [
                 {
                     "transaction_id": txn.transaction_id,
                     "order_id": txn.order_id,
@@ -146,7 +161,7 @@ class PaymentsHistory:
                     "razorpay_order_id": txn.razorpay_order_id,
                     "razorpay_payment_id": txn.razorpay_payment_id,
                     "farmer": f"{txn.farmer_first_name} {txn.farmer_last_name}" if txn.farmer_first_name else None,
-                    "crop_name": txn.crop_name
+                    "crop_name": txn.crop_name,
                 }
                 for txn in transactions
             ]
@@ -156,12 +171,13 @@ class PaymentsHistory:
                 "page_size": page_size,
                 "total_records": total_records,
                 "total_pages": total_pages,
-                "data": result
+                "data": result_data,
             }
-
+        except HTTPException:
+            raise
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An unexpected error occurred: {str(e)}"
+                detail=f"An error occurred: {str(e)}",
             )

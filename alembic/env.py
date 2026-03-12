@@ -14,7 +14,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import Base and all models so metadata is populated for autogenerate
-from src.db_connections.postgresql_conn import Base, SQLALCHEMY_DATABASE_URL
+# Use sync URL for migrations (Alembic requires sync engine)
+from src.db_connections.database import Base, SQLALCHEMY_DATABASE_URL
 from src.data_models.users_model import Users
 from src.data_models.roles_model import Roles
 from src.data_models.permissions_model import Permissions
