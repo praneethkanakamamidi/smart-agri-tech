@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.services.location_service import LocationService
-from src.db_connections.postgresql_conn import get_db
+from src.db_connections.database import get_db_async
 from src.services.login_service import LoginService
 from src.data_models.users_model import Users
 
@@ -9,25 +9,25 @@ router = APIRouter(prefix="/api", tags=["Location"])
 
 get_current_active_user = LoginService.get_current_active_user
 
+
 def location_service() -> LocationService:
     return LocationService()
 
+
 @router.post("/states/")
-def get_states(
-    db: Session = Depends(get_db),
+async def post_states(
+    db: AsyncSession = Depends(get_db_async),
     service: LocationService = Depends(location_service),
-    user: Users = Depends(get_current_active_user)
+    user: Users = Depends(get_current_active_user),
 ):
-    response = service.get_states(db)
-    return response
+    return await service.get_states(db)
+
 
 @router.put("/districts/{id}")
-def get_districts(
+async def put_districts(
     id: int,
-    db: Session = Depends(get_db), 
+    db: AsyncSession = Depends(get_db_async),
     service: LocationService = Depends(location_service),
-    user: Users = Depends(get_current_active_user)
+    user: Users = Depends(get_current_active_user),
 ):
-    response = service.get_districts(id, db)
-    return response
-
+    return await service.get_districts(id, db)

@@ -1,23 +1,19 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.services.miscellaneous_service import MiscellaneousDataService
-from src.db_connections.postgresql_conn import get_db
-from src.services.login_service import LoginService
-from src.data_models.users_model import Users
+from src.db_connections.database import get_db_async
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api", tags=["Miscellaneous"])
 
-get_current_active_user = LoginService.get_current_active_user
 
 def get_miscellaneous_data_service() -> MiscellaneousDataService:
     return MiscellaneousDataService()
 
+
 @router.get("/miscellaneous/{id}")
-def get_miscellaneous_data(
-    id: int, 
-    db: Session = Depends(get_db), 
+async def get_miscellaneous_data(
+    id: int,
+    db: AsyncSession = Depends(get_db_async),
     service: MiscellaneousDataService = Depends(get_miscellaneous_data_service),
-    # user: Users = Depends(get_current_active_user)
 ):
-    response = service.get_miscellaneous_data(id, db)
-    return response
+    return await service.get_miscellaneous_data(id, db)

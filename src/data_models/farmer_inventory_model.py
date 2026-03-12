@@ -1,5 +1,7 @@
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from src.db_connections.postgresql_conn import Base
+
 
 class FarmerInventory(Base):
     __tablename__ = "farmer_inventory"
@@ -15,3 +17,8 @@ class FarmerInventory(Base):
     updated_by = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
+
+    crop_rel = relationship("Crops", foreign_keys=[crop], lazy="raise")
+    soil_rel = relationship("Soil", foreign_keys=[soil], lazy="raise")
+    fertilizer_rel = relationship("Fertilizers", foreign_keys=[fertilizer], lazy="raise")
+    created_by_user = relationship("Users", foreign_keys=[created_by], lazy="raise")
