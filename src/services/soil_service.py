@@ -1,159 +1,173 @@
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-from src.data_models.soil_model import Soil
-from src.data_models.users_model import Users
-from src.data_models.miscellaneous_model import Miscellaneous_Data
+from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
+from src.data_models.soil_model import Soil
+from src.data_models.miscellaneous_model import Miscellaneous_Data
+
+
 class SoilService:
-    def post_soil(self, payload, db:Session):
+    async def post_soil(self, payload, db: AsyncSession):
         try:
-            existing_soil_data = db.query(Soil).filter(
-                func.lower(Soil.soil_name)==payload.soil_name.lower()
-                ).first()
-            active_misc_data = db.query(Miscellaneous_Data).filter(
+            stmt = select(Soil).where(func.lower(Soil.soil_name) == payload.soil_name.lower())
+            result = await db.execute(stmt)
+            existing_soil_data = result.scalar_one_or_none()
+
+            stmt_misc = select(Miscellaneous_Data).where(
                 Miscellaneous_Data.category == "status",
-                Miscellaneous_Data.value == "active"
-            ).first()
+                Miscellaneous_Data.value == "active",
+            )
+            res_misc = await db.execute(stmt_misc)
+            active_misc_data = res_misc.scalar_one_or_none()
 
             if existing_soil_data:
-                 raise HTTPException(
+                raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="Error: Soil of that name already exists",
                 )
-                 
+
             new_soil = Soil(
                 soil_name=payload.soil_name,
                 soil_texture=payload.soil_texture,
                 description=payload.description,
                 created_by=payload.created_by,
                 status=active_misc_data.id,
-                created_at=datetime.now()
+                created_at=datetime.now(),
             )
             db.add(new_soil)
-            db.commit()
-            
+            await db.commit()
             return {"message": f"Soil '{payload.soil_name}' has been successfully created!"}
-        
+        except HTTPException:
+            await db.rollback()
+            raise
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An error occurred: {str(e)}"
+                detail=f"An error occurred: {str(e)}",
             )
 
-        
-    def get_soil(self, id, db: Session) -> list:
+    async def get_soil(self, id: int, db: AsyncSession):
         try:
-            soil_data = db.query(Soil).filter(Soil.id==id).first()
-            created_user_data = db.query(Users).filter(Users.id==soil_data.created_by).first()
-            updated_user_data = db.query(Users).filter(Users.id==soil_data.updated_by).first()
-            status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id ==soil_data.status).first()
-            soil_data.created_user=created_user_data.first_name if created_user_data else None
-            soil_data.updated_user=updated_user_data.first_name if updated_user_data else None
-            soil_data.status_value=status_data.value if status_data else None
-            return soil_data
+            stmt = (
+                select(Soil)
+                .where(Soil.id == id)
+                .options(
+                    joinedload(Soil.status_rel),
+                    joinedload(Soil.created_by_user),
+                    joinedload(Soil.updated_by_user),
+                )
+            )
+            result = await db.execute(stmt)
+            soil_data = result.scalar_one_or_none()
+            if soil_data:
+                soil_data.created_user = soil_data.created_by_user.first_name if soil_data.created_by_user else None
+                soil_data.updated_user = soil_data.updated_by_user.first_name if soil_data.updated_by_user else None
+                soil_data.status_value = soil_data.status_rel.value if soil_data.status_rel else None
+                return soil_data
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Soil not found")
+        except HTTPException:
+            raise
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An error occurred: {str(e)}"
+                detail=f"An error occurred: {str(e)}",
             )
-    
-    def get_soil(self, db: Session) -> list:
+
+    async def get_soils(self, db: AsyncSession):
         try:
-            soil_data = db.query(Soil).order_by(Soil.created_at.desc()).all()
+            stmt = (
+                select(Soil)
+                .order_by(Soil.created_at.desc())
+                .options(joinedload(Soil.status_rel))
+            )
+            result = await db.execute(stmt)
+            soil_data = result.scalars().unique().all()
             for soil in soil_data:
-                status_data = db.query(Miscellaneous_Data).filter(Miscellaneous_Data.id ==soil.status).first()
-                soil.status_value=status_data.value if status_data else None
+                soil.status_value = soil.status_rel.value if soil.status_rel else None
             return soil_data
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An error occurred: {str(e)}"
+                detail=f"An error occurred: {str(e)}",
             )
 
-    def put_soil(self, payload, db:Session):
+    async def put_soil(self, payload, db: AsyncSession):
         try:
-            existing_soil_data = db.query(Soil).filter(
-                Soil.id==payload.id
-                ).first()
+            stmt = select(Soil).where(Soil.id == payload.id)
+            result = await db.execute(stmt)
+            existing_soil_data = result.scalar_one_or_none()
             if not existing_soil_data:
-                 raise HTTPException(
+                raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="Error: Soil of that id does not exist",
                 )
-
-            existing_soil_data.soil_name=payload.soil_name
-            existing_soil_data.soil_texture=payload.soil_texture
-            existing_soil_data.description=payload.description
-            existing_soil_data.updated_by=payload.updated_by
-            existing_soil_data.updated_at=datetime.now()
-            db.commit()
-
-            return  {"message": f"Soil has been updated"}
+            existing_soil_data.soil_name = payload.soil_name
+            existing_soil_data.soil_texture = payload.soil_texture
+            existing_soil_data.description = payload.description
+            existing_soil_data.updated_by = payload.updated_by
+            existing_soil_data.updated_at = datetime.now()
+            await db.commit()
+            return {"message": "Soil has been updated"}
+        except HTTPException:
+            await db.rollback()
+            raise
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An error occurred: {str(e)}"
+                detail=f"An error occurred: {str(e)}",
             )
-            
-    def soil_status(self, payload, db:Session):
+
+    async def soil_status(self, payload, db: AsyncSession):
         try:
-            initial_state = ""
-            final_state = ""
+            stmt = select(Soil).where(Soil.id == payload.id)
+            result = await db.execute(stmt)
+            existing_soil_data = result.scalar_one_or_none()
 
-            existing_soil_data = db.query(Soil).filter(
-                Soil.id==payload.id
-                ).first()
-            inactive_misc_data = db.query(Miscellaneous_Data).filter(
+            stmt_inactive = select(Miscellaneous_Data).where(
                 Miscellaneous_Data.category == "status",
-                Miscellaneous_Data.value == "inactive"
-
-            ).first()
-            active_misc_data = db.query(Miscellaneous_Data).filter(
+                Miscellaneous_Data.value == "inactive",
+            )
+            stmt_active = select(Miscellaneous_Data).where(
                 Miscellaneous_Data.category == "status",
-                Miscellaneous_Data.value == "active"
-            ).first()
+                Miscellaneous_Data.value == "active",
+            )
+            res_inactive = await db.execute(stmt_inactive)
+            res_active = await db.execute(stmt_active)
+            inactive_misc_data = res_inactive.scalar_one_or_none()
+            active_misc_data = res_active.scalar_one_or_none()
 
             if not existing_soil_data:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Soil not found"
-                )
-            
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Soil not found")
             if not inactive_misc_data or not active_misc_data:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Status data not found"
-                )
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Status data not found")
 
+            initial_state, final_state = "", ""
             if existing_soil_data.status == inactive_misc_data.id:
                 existing_soil_data.status = active_misc_data.id
-                existing_soil_data.updated_by=payload.updated_by
-                existing_soil_data.updated_at=datetime.now()
-                db.commit()
-                initial_state = "inactive"
-                final_state = "active"
-                
+                existing_soil_data.updated_by = payload.updated_by
+                existing_soil_data.updated_at = datetime.now()
+                await db.commit()
+                initial_state, final_state = "inactive", "active"
             elif existing_soil_data.status == active_misc_data.id:
                 existing_soil_data.status = inactive_misc_data.id
-                existing_soil_data.updated_by=payload.updated_by
-                existing_soil_data.updated_at=datetime.now()
-                db.commit()
-                initial_state = "active"
-                final_state = "inactive"
-            
-            return {"message": f"{existing_soil_data.soil_name} status has been changed from {initial_state} to {final_state}"}
+                existing_soil_data.updated_by = payload.updated_by
+                existing_soil_data.updated_at = datetime.now()
+                await db.commit()
+                initial_state, final_state = "active", "inactive"
 
+            return {"message": f"{existing_soil_data.soil_name} status has been changed from {initial_state} to {final_state}"}
+        except HTTPException:
+            await db.rollback()
+            raise
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An error occurred: {str(e)}"
+                detail=f"An error occurred: {str(e)}",
             )
-
-

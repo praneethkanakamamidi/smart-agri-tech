@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Float
+from sqlalchemy.orm import relationship
 from src.db_connections.postgresql_conn import Base
 
 
@@ -22,3 +23,7 @@ class MarketOffers(Base):
     order_id = Column(Integer, ForeignKey('orders.id', ondelete='SET NULL'), nullable=True)  # Set when accepted
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
+
+    farmer_inventory_rel = relationship("FarmerInventory", foreign_keys=[farmer_inventory], lazy="raise")
+    vendor_user = relationship("Users", foreign_keys=[vendor], lazy="raise")
+    farmer_user = relationship("Users", foreign_keys=[farmer], lazy="raise")
