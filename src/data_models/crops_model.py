@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from src.db_connections.postgresql_conn import Base
 
@@ -6,6 +6,7 @@ from src.db_connections.postgresql_conn import Base
 class Crops(Base):
     """A produce item (tomato, onion, rice, ...)."""
     __tablename__ = "crops"
+    __table_args__ = (Index("idx_crops_category", "category_id"),)
 
     id = Column(Integer, primary_key=True)
     crop_name = Column(String(100))

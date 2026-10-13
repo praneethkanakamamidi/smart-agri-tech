@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Boolean, JSON, Index
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Boolean, JSON, Index, text
 from sqlalchemy.orm import relationship
 from src.db_connections.postgresql_conn import Base
 
@@ -21,7 +21,14 @@ DISPUTE_REASONS = (
 class Disputes(Base):
     """A complaint raised on an order by the farmer or vendor, resolved by an admin."""
     __tablename__ = "disputes"
-    __table_args__ = (Index("idx_disputes_status", "status"),)
+    __table_args__ = (
+        Index("idx_disputes_status", "status"),
+        Index("idx_disputes_order", "order_id", "status"),
+        Index("idx_disputes_raised_by", "raised_by"),
+        Index("idx_disputes_against", "against"),
+        Index("idx_disputes_assigned", "assigned_to", postgresql_where=text("assigned_to IS NOT NULL")),
+        Index("idx_disputes_created", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(Integer, ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
@@ -48,6 +55,7 @@ class Disputes(Base):
 class DisputeMessages(Base):
     """Case history: responses and evidence from either party or an admin."""
     __tablename__ = "dispute_messages"
+    __table_args__ = (Index("idx_dispute_messages_dispute", "dispute_id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     dispute_id = Column(Integer, ForeignKey('disputes.id', ondelete='CASCADE'), nullable=False)

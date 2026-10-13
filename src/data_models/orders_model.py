@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Date, ForeignKey, Numeric, JSON, Text, Index
+from sqlalchemy import Column, String, Integer, DateTime, Date, ForeignKey, Numeric, JSON, Text, Index, text
 from sqlalchemy.orm import relationship
 from src.db_connections.postgresql_conn import Base
 
@@ -47,9 +47,14 @@ class Orders(Base):
     """
     __tablename__ = "orders"
     __table_args__ = (
-        Index("idx_orders_farmer", "farmer"),
-        Index("idx_orders_vendor", "vendor"),
         Index("uq_orders_order_number", "order_number", unique=True),
+        Index("idx_orders_farmer_created", "farmer", "created_at"),
+        Index("idx_orders_vendor_created", "vendor", "created_at"),
+        Index("idx_orders_status_created", "status", "created_at"),
+        Index("idx_orders_created", "created_at"),
+        Index("idx_orders_listing", "farmer_inventory"),
+        Index("idx_orders_negotiation", "negotiation_id", postgresql_where=text("negotiation_id IS NOT NULL")),
+        Index("idx_orders_offer", "offer_id", postgresql_where=text("offer_id IS NOT NULL")),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -103,6 +108,7 @@ class Orders(Base):
 
 class OrderStatusHistory(Base):
     __tablename__ = "order_status_history"
+    __table_args__ = (Index("idx_order_status_history_order", "order_id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(Integer, ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
@@ -116,6 +122,7 @@ class OrderStatusHistory(Base):
 class OrderAdjustments(Base):
     """Authorised correction to an order's payable amount. The original terms are never rewritten."""
     __tablename__ = "order_adjustments"
+    __table_args__ = (Index("idx_order_adjustments_order", "order_id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(Integer, ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
@@ -128,6 +135,10 @@ class OrderAdjustments(Base):
 class Invoices(Base):
     """Order receipts, payment receipts and invoices with sequential numbering."""
     __tablename__ = "invoices"
+    __table_args__ = (
+        Index("idx_invoices_order", "order_id"),
+        Index("idx_invoices_transaction", "transaction_id", postgresql_where=text("transaction_id IS NOT NULL")),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(Integer, ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)

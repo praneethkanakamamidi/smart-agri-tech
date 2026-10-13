@@ -1,4 +1,6 @@
-from sqlalchemy import Column, String, Integer, DateTime, Date, ForeignKey, Numeric, Boolean, UniqueConstraint, Text
+from sqlalchemy import (
+    Column, String, Integer, DateTime, Date, ForeignKey, Numeric, Boolean, UniqueConstraint, Text, Index, text,
+)
 from sqlalchemy.orm import relationship
 from src.db_connections.postgresql_conn import Base
 
@@ -19,6 +21,13 @@ NEG_OPEN = "OPEN"
 class Negotiations(Base):
     """A bargaining session between one vendor and one farmer over one listing."""
     __tablename__ = "negotiations"
+    __table_args__ = (
+        Index("idx_negotiations_vendor_updated", "vendor", "updated_at"),
+        Index("idx_negotiations_farmer_updated", "farmer", "updated_at"),
+        Index("idx_negotiations_listing", "listing_id", "vendor", "status"),
+        Index("idx_negotiations_order", "order_id", postgresql_where=text("order_id IS NOT NULL")),
+        Index("idx_negotiations_created", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     listing_id = Column(Integer, ForeignKey('farmer_inventory.id', ondelete='CASCADE'), nullable=False)
@@ -46,7 +55,13 @@ class Offers(Base):
     supersedes the previous one; earlier versions are never overwritten.
     """
     __tablename__ = "offers"
-    __table_args__ = (UniqueConstraint('negotiation_id', 'version', name='uq_offer_version'),)
+    __table_args__ = (
+        UniqueConstraint('negotiation_id', 'version', name='uq_offer_version'),
+        Index("idx_offers_pending_expiry", "expires_at", postgresql_where=text("status = 'PENDING'")),
+        Index("idx_offers_recipient", "recipient"),
+        Index("idx_offers_offered_by", "offered_by"),
+        Index("idx_offers_supersedes", "supersedes_offer_id", postgresql_where=text("supersedes_offer_id IS NOT NULL")),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     negotiation_id = Column(Integer, ForeignKey('negotiations.id', ondelete='CASCADE'), nullable=False)

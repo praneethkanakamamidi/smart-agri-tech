@@ -15,6 +15,11 @@ class Users(Base):
     __table_args__ = (
         Index("uq_users_email", func.lower(text("email")), unique=True, postgresql_where=text("email IS NOT NULL")),
         Index("uq_users_phone", "phone", unique=True, postgresql_where=text("phone IS NOT NULL")),
+        Index("idx_users_user_name", "user_name"),  # resolved on every authenticated request
+        Index("idx_users_role", "role_id"),
+        Index("idx_users_location", "state", "district"),
+        Index("idx_users_pending_deletion", "deletion_requested_at",
+              postgresql_where=text("deletion_requested_at IS NOT NULL AND deleted_at IS NULL")),
     )
 
     id = Column(Integer, primary_key=True)
