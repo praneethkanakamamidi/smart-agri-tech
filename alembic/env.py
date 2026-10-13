@@ -16,20 +16,7 @@ load_dotenv()
 # Import Base and all models so metadata is populated for autogenerate
 # Use sync URL for migrations (Alembic requires sync engine)
 from src.db_connections.database import Base, SQLALCHEMY_DATABASE_URL
-from src.data_models.users_model import Users
-from src.data_models.roles_model import Roles
-from src.data_models.permissions_model import Permissions
-from src.data_models.role_permissions import RolePermissions
-from src.data_models.miscellaneous_model import Miscellaneous_Data
-from src.data_models.crops_model import Crops
-from src.data_models.soil_model import Soil
-from src.data_models.fertilizers_model import Fertilizers
-from src.data_models.farmer_inventory_model import FarmerInventory
-from src.data_models.states_model import States
-from src.data_models.districts_model import Districts
-from src.data_models.orders_model import Orders
-from src.data_models.transactions_model import Transactions
-from src.data_models.market_offers_model import MarketOffers
+import src.data_models.registry  # noqa: F401  (registers every model on Base.metadata)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

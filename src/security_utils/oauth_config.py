@@ -1,15 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import sessionmaker
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
-from typing import Optional, Union, Any
+from jose import jwt
+from datetime import datetime, timedelta, timezone
 from src.data_models.users_model import Users
-from fastapi import APIRouter, Depends
 from src.security_utils.hashing_config import Hashing
 from src.helpers.settings_config import OAuthSettings
-import secrets
-import os
 
 # Initialize hashing utility and OAuth settings
 hashing = Hashing()
@@ -33,7 +26,7 @@ class OAuth2Handler:
         Returns:
             str: The encoded JWT access token.
         """
-        expiration_time = datetime.utcnow() + (expiry_duration if expiry_duration else self.access_expiry)
+        expiration_time = datetime.now(timezone.utc) + (expiry_duration if expiry_duration else self.access_expiry)
         token_data = {"uid": user.user_name, "exp": expiration_time.timestamp()}  # Convert datetime to timestamp
         return jwt.encode(token_data, access_token_secret_key, algorithm=self.algorithm)
 
@@ -48,6 +41,6 @@ class OAuth2Handler:
         Returns:
             str: The encoded JWT refresh token.
         """
-        expiration_time = datetime.utcnow() + (expiry_duration if expiry_duration else self.refresh_expiry)
+        expiration_time = datetime.now(timezone.utc) + (expiry_duration if expiry_duration else self.refresh_expiry)
         token_data = {"uid": user.user_name, "exp": expiration_time.timestamp()}  # Convert datetime to timestamp
         return jwt.encode(token_data, self.refresh_token_secret_key, algorithm=self.algorithm)

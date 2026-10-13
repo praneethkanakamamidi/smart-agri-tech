@@ -4,6 +4,7 @@ from src.services.crops_service import CropService
 from src.db_connections.database import get_db_async
 from src.services.login_service import LoginService
 from src.data_models.users_model import Users
+from src.security_utils.role_guard import require_roles, ADMIN
 from src.schemas.crops_schema import CropsSchema, UpdateCropSchema, CropStatus
 
 router = APIRouter(prefix="/api", tags=["Crops"])
@@ -20,8 +21,12 @@ async def post_crops_data(
     payload: CropsSchema,
     db: AsyncSession = Depends(get_db_async),
     service: CropService = Depends(crops_service),
-    user: Users = Depends(get_current_active_user),
+    user: Users = Depends(require_roles(ADMIN)),
 ):
+    if hasattr(payload, 'created_by'):
+        payload.created_by = user.id
+    if hasattr(payload, 'updated_by'):
+        payload.updated_by = user.id
     return await service.post_crop(payload, db)
 
 
@@ -30,8 +35,12 @@ async def put_crops_data(
     payload: UpdateCropSchema,
     db: AsyncSession = Depends(get_db_async),
     service: CropService = Depends(crops_service),
-    user: Users = Depends(get_current_active_user),
+    user: Users = Depends(require_roles(ADMIN)),
 ):
+    if hasattr(payload, 'created_by'):
+        payload.created_by = user.id
+    if hasattr(payload, 'updated_by'):
+        payload.updated_by = user.id
     return await service.put_crop(payload, db)
 
 
@@ -59,6 +68,10 @@ async def crop_data_status(
     payload: CropStatus,
     db: AsyncSession = Depends(get_db_async),
     service: CropService = Depends(crops_service),
-    user: Users = Depends(get_current_active_user),
+    user: Users = Depends(require_roles(ADMIN)),
 ):
+    if hasattr(payload, 'created_by'):
+        payload.created_by = user.id
+    if hasattr(payload, 'updated_by'):
+        payload.updated_by = user.id
     return await service.crop_status(payload, db)

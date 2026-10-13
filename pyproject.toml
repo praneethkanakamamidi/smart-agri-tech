@@ -1,0 +1,8 @@
+[tool.ruff]
+target-version = "py310"
+line-length = 130
+extend-exclude = ["src/eda", "src/ml_models/*.ipynb"]
+
+[tool.ruff.lint]
+# Pyflakes (unused/undefined names, etc.), syntax errors, mutable default arguments.
+select = ["F", "E9", "B006"]

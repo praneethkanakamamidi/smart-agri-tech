@@ -1,22 +1,26 @@
 """add market_offers table
 
 Revision ID: 001
-Revises:
+Revises: 000
 Create Date: 2025-03-11
 
 """
 from alembic import op
 import sqlalchemy as sa
 
+from src.db_connections.migration_helpers import has_table
+
 
 # revision identifiers, used by Alembic.
 revision = '001'
-down_revision = None
+down_revision = '000'
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
+    if has_table('market_offers'):  # created earlier from docs/migration_market_offers.sql
+        return
     op.create_table(
         'market_offers',
         sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),

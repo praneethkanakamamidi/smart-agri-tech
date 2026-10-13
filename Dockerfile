@@ -1,39 +1,36 @@
-# Use the official tiangolo/uvicorn-gunicorn-fastapi image with Python 3.10
-FROM tiangolo/uvicorn-gunicorn-fastapi:python3.10
+# syntax=docker/dockerfile:1
 
-# Set environment variables for Python
+# ---- build stage: compile wheels once --------------------------------------------------------
+FROM python:3.13-slim AS build
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
+WORKDIR /build
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt .
+RUN pip wheel --wheel-dir /wheels -r requirements.txt
+
+# ---- runtime stage: no compilers, non-root ---------------------------------------------------
+FROM python:3.13-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    HOME=/smart-agri-tech
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    BACKEND_PORT=8000 \
+    UPLOAD_DIR=/data/uploads
+WORKDIR /app
 
-# Set working directory
-WORKDIR /smart-agri-tech
+RUN groupadd --system app && useradd --system --gid app --home-dir /app --shell /usr/sbin/nologin app
+COPY --from=build /wheels /wheels
+RUN pip install --no-index --find-links=/wheels /wheels/* && rm -rf /wheels
 
-# Copy and install dependencies first
-COPY ./requirements.txt /smart-agri-tech/
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --chown=app:app . .
+RUN chmod +x entrypoint.sh && mkdir -p /data/uploads && chown -R app:app /data
 
-# Copy the rest of the application
-COPY ./ /smart-agri-tech/
+USER app
+EXPOSE 8000
 
-# Ensure the entrypoint script is executable
-RUN chmod +x /smart-agri-tech/entrypoint.sh
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"BACKEND_PORT\", \"8000\")}/health', timeout=4)" || exit 1
 
-# Create non-root user if not exists
-RUN if ! id "appuser" &>/dev/null; then \
-        addgroup --system appgroup && \
-        adduser --system --ingroup appgroup --disabled-password --gecos "" appuser; \
-    fi && \
-    chown -R appuser:appgroup /smart-agri-tech /usr/local/lib/python*
-
-# Switch to the created non-root user
-USER appuser
-
-# Expose backend port
-EXPOSE ${BACKEND_PORT}
-
-# Set the entrypoint
-ENTRYPOINT ["/smart-agri-tech/entrypoint.sh"]
-
-# Run FastAPI app
-CMD ["sh", "-c", "uvicorn main:smart_agri_tech_app --host 0.0.0.0 --port $BACKEND_PORT --reload"]
+ENTRYPOINT ["./entrypoint.sh"]
+CMD ["serve"]

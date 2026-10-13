@@ -1,63 +1,70 @@
+"""
+Structured JSON logging.
+
+- LOG_LEVEL (default INFO) sets the level.
+- Logs go to stdout (the container/12-factor norm). Set LOG_FILE=logs/app.log to also write a file.
+- Every record carries the current request id (set by RequestContextMiddleware) when there is one.
+"""
 import json
 import logging
 import os
+from contextvars import ContextVar
+from datetime import datetime, timezone
+
+request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
+
+_STANDARD_ATTRS = set(vars(logging.LogRecord("", 0, "", 0, "", None, None))) | {"message", "asctime"}
+
 
 class JSONFormatter(logging.Formatter):
-    """Custom JSON formatter for structured logging.
+    """Formats log records as one JSON object per line."""
 
-    This formatter outputs log records as structured JSON objects, which are useful
-    for logging in cloud environments or log aggregation systems.
-
-    :param record: The log record to format (from `logging` module).
-    :return: A JSON-formatted string containing the log information.
-    """
     def format(self, record):
         log_obj = {
-            "timestamp": self.formatTime(record, self.datefmt),  # Timestamp of the log entry
-            "name": record.name,  # Logger name
-            "level": record.levelname,  # Log level (e.g., INFO, ERROR)
-            "message": record.getMessage(),  # The log message
-            "module": record.module,  # The module in which the log was created
-            "function": record.funcName,  # The function where the log was generated
-            "line": record.lineno  # The line number where the log occurred
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "level": record.levelname,
+            "name": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
         }
-
-        # Add exception info if present
+        request_id = request_id_var.get()
+        if request_id:
+            log_obj["request_id"] = request_id
         if record.exc_info:
             log_obj["exception"] = self.formatException(record.exc_info)
-
-        # Add additional fields from `extra`, ensuring no conflict with default attributes
+        # Fields passed with `extra={...}` (and the older `extra_fields` convention).
         for key, value in record.__dict__.get("extra_fields", {}).items():
-            if key not in log_obj:  # Avoid overwriting existing keys
-                log_obj[key] = value
+            log_obj.setdefault(key, value)
+        for key, value in record.__dict__.items():
+            if key not in _STANDARD_ATTRS and key != "extra_fields" and not key.startswith("_"):
+                log_obj.setdefault(key, value)
+        return json.dumps(log_obj, default=str)
 
-        return json.dumps(log_obj)  # Return the log entry as a JSON string
+
+def _configure_root():
+    root = logging.getLogger()
+    if getattr(root, "_smart_agri_configured", False):
+        return
+    root.setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
+    for handler in list(root.handlers):
+        root.removeHandler(handler)
+    stream = logging.StreamHandler()
+    stream.setFormatter(JSONFormatter())
+    root.addHandler(stream)
+    log_file = os.getenv("LOG_FILE")
+    if log_file:
+        os.makedirs(os.path.dirname(log_file) or ".", exist_ok=True)
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(JSONFormatter())
+        root.addHandler(file_handler)
+    for noisy in ("uvicorn.access",):
+        logging.getLogger(noisy).setLevel(os.getenv("ACCESS_LOG_LEVEL", "WARNING").upper())
+    root._smart_agri_configured = True
+
 
 def get_logger(name):
-    """Configures and returns a logger with JSON formatting.
-
-    This function sets up a logger with a custom `JSONFormatter` to produce structured
-    JSON logs. The logger is also configured with a stream handler to output logs
-    to the console.
-
-    :param name: The name of the logger. Typically, use `__name__` for modular logging.
-    :type name: str
-    :return: A configured logger with JSON formatting.
-    :rtype: logging.Logger
-    """
-    logger = logging.getLogger(name)
-    
-    # Avoid adding multiple handlers if called multiple times
-    if not logger.hasHandlers():
-        logger.setLevel(logging.INFO)  # Set the default log level to INFO
-        handler = logging.StreamHandler()  # Log to the console (stdout)
-        handler.setFormatter(JSONFormatter())  # Set the custom JSON formatter
-        logger.addHandler(handler)  # Add the handler to the logger
-        log_dir = 'logs'
-        if not os.path.exists(log_dir):  # Ensure the 'logs' directory exists
-            os.makedirs(log_dir)  # Create the directory if it doesn't exist
-        file_handler = logging.FileHandler(os.path.join(log_dir, 'app.log'))
-        file_handler.setFormatter(JSONFormatter())  # Set the custom JSON formatter
-        logger.addHandler(file_handler)  # Add the file handler to the logger
-
-    return logger  # Return the configured logger
+    """Return a logger that emits structured JSON (configures the root logger once)."""
+    _configure_root()
+    return logging.getLogger(name)

@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.helpers.serializers import model_to_dict
 from datetime import datetime
 
 from src.data_models.crops_model import Crops
@@ -65,10 +66,12 @@ class CropService:
             result = await db.execute(stmt)
             crop_data = result.scalar_one_or_none()
             if crop_data:
-                crop_data.created_user = crop_data.created_by_user.first_name if crop_data.created_by_user else None
-                crop_data.updated_user = crop_data.updated_by_user.first_name if crop_data.updated_by_user else None
-                crop_data.status_value = crop_data.status_rel.value if crop_data.status_rel else None
-                return crop_data
+                return model_to_dict(
+                    crop_data,
+                    created_user=crop_data.created_by_user.first_name if crop_data.created_by_user else None,
+                    updated_user=crop_data.updated_by_user.first_name if crop_data.updated_by_user else None,
+                    status_value=crop_data.status_rel.value if crop_data.status_rel else None,
+                )
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Crop not found")
         except HTTPException:
             raise
