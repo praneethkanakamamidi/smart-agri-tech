@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Boolean, Index
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Boolean, Index, text
 from sqlalchemy.orm import relationship
 from src.db_connections.postgresql_conn import Base
 
@@ -10,8 +10,16 @@ class Messages(Base):
     """
     __tablename__ = "messages"
     __table_args__ = (
-        Index("idx_messages_sender", "sender"),
+        Index("idx_messages_conversation", "sender", "receiver", "created_at"),
         Index("idx_messages_receiver_read", "receiver", "is_read"),
+        # Context FKs are SET NULL on parent delete; partial indexes keep that from scanning chat.
+        Index("idx_messages_order", "order_id", postgresql_where=text("order_id IS NOT NULL")),
+        Index("idx_messages_listing", "listing_id", postgresql_where=text("listing_id IS NOT NULL")),
+        Index("idx_messages_negotiation", "negotiation_id", postgresql_where=text("negotiation_id IS NOT NULL")),
+        Index("idx_messages_dispute", "dispute_id", postgresql_where=text("dispute_id IS NOT NULL")),
+        Index("idx_messages_attachment", "attachment_file_id",
+              postgresql_where=text("attachment_file_id IS NOT NULL")),
+        Index("idx_messages_offer", "offer_id", postgresql_where=text("offer_id IS NOT NULL")),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)

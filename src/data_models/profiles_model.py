@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Numeric, Text, JSON
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Numeric, Text, JSON, Index
 from src.db_connections.postgresql_conn import Base
 
 
@@ -53,6 +53,10 @@ class VendorProfiles(Base):
 class VerificationRequests(Base):
     """Identity / farm / business verification submitted by a user and reviewed by an admin."""
     __tablename__ = "verification_requests"
+    __table_args__ = (
+        Index("idx_verification_requests_user", "user_id", "status"),
+        Index("idx_verification_requests_status", "status", "submitted_at"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
