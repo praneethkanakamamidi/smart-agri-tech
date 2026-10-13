@@ -3,17 +3,16 @@ Database layer with clear separation between synchronous and asynchronous access
 
 - sync_engine / SyncSessionLocal: For migrations, scripts, background jobs
 - async_engine / AsyncSessionLocal: For API endpoints (non-blocking I/O)
+
+Pool sizing and timeouts are configurable through DB_* environment variables.
 """
 import os
-from contextlib import asynccontextmanager, contextmanager
 from typing import AsyncGenerator, Generator
 
 from dotenv import load_dotenv
-from fastapi import HTTPException, status
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 load_dotenv()
 
@@ -22,6 +21,12 @@ DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 DB_HOST = os.getenv("POSTGRES_HOST")
 DB_NAME = os.getenv("POSTGRES_DB")
 DB_PORT = int(os.getenv("POSTGRES_DB_INTERNAL_PORT", "5432"))
+
+POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
+MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "20"))
+POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "1800"))  # recycle before typical LB/firewall idle cut-offs
+STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 0 disables
 
 # Sync: postgresql+psycopg2 (blocking driver)
 SQLALCHEMY_DATABASE_URL = (
@@ -38,9 +43,11 @@ SQLALCHEMY_DATABASE_URL_ASYNC = (
 # ---------------------------------------------------------------------------
 sync_engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    pool_size=10,
-    max_overflow=20,
-    pool_timeout=30,
+    pool_size=POOL_SIZE,
+    max_overflow=MAX_OVERFLOW,
+    pool_timeout=POOL_TIMEOUT,
+    pool_recycle=POOL_RECYCLE,
+    pool_pre_ping=True,
     echo=False,
     future=True,
 )
@@ -55,12 +62,19 @@ SyncSessionLocal = sessionmaker(
 # ---------------------------------------------------------------------------
 # Asynchronous engine and session (API endpoints)
 # ---------------------------------------------------------------------------
+_async_connect_args = {"server_settings": {"application_name": "smart-agri-tech-api"}}
+if STATEMENT_TIMEOUT_MS > 0:
+    _async_connect_args["server_settings"]["statement_timeout"] = str(STATEMENT_TIMEOUT_MS)
+
 async_engine = create_async_engine(
     SQLALCHEMY_DATABASE_URL_ASYNC,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=POOL_SIZE,
+    max_overflow=MAX_OVERFLOW,
+    pool_timeout=POOL_TIMEOUT,
+    pool_recycle=POOL_RECYCLE,
     pool_pre_ping=True,
     echo=False,
+    connect_args=_async_connect_args,
 )
 
 AsyncSessionLocal = async_sessionmaker(
@@ -85,24 +99,30 @@ def get_db_sync() -> Generator[Session, None, None]:
     db = SyncSessionLocal()
     try:
         yield db
-    except Exception as e:
+    except Exception:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error: {str(e)}",
-        )
+        raise
     finally:
         db.close()
 
 
 async def get_db_async() -> AsyncGenerator[AsyncSession, None]:
-    """Asynchronous session for API endpoints."""
+    """
+    Asynchronous session for API endpoints.
+
+    Any exception raised by the endpoint (including HTTPException) is re-raised unchanged
+    after rolling back, so a 404/409 stays a 404/409 and unexpected errors reach the global
+    error handler. Never wrap them here.
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session
-        except Exception as e:
+        except Exception:
             await session.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database error: {str(e)}",
-            )
+            raise
+
+
+async def dispose_engines():
+    """Close pooled connections on shutdown."""
+    await async_engine.dispose()
+    sync_engine.dispose()

@@ -19,36 +19,34 @@ MONGO_DB = os.getenv("MONGO_DB")
 MONGO_AUTH_SOURCE = os.getenv("MONGO_AUTH_SOURCE", "admin")
 MONGO_RETRY_WRITES = os.getenv("MONGO_RETRY_WRITES", "true")
 
-# Validate required environment variables
-if not MONGO_DB:
-    raise ValueError("❌ MONGO_DB environment variable is required. Check your .env file.")
+_client: AsyncIOMotorClient | None = None
 
-# Construct MongoDB connection URI
-if MONGO_USERNAME and MONGO_PASSWORD:
-    MONGO_URI = (
-        f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/"
-        f"{MONGO_DB}?authSource={MONGO_AUTH_SOURCE}&retryWrites={MONGO_RETRY_WRITES}"
-    )
-else:
-    MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}"
 
-logger.info(f"🚀 Connecting to MongoDB at {MONGO_HOST}:{MONGO_PORT}")
+def _build_uri() -> str:
+    if not MONGO_DB:
+        raise ValueError("❌ MONGO_DB environment variable is required. Check your .env file.")
+    if MONGO_USERNAME and MONGO_PASSWORD:
+        return (
+            f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/"
+            f"{MONGO_DB}?authSource={MONGO_AUTH_SOURCE}&retryWrites={MONGO_RETRY_WRITES}"
+        )
+    return f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}"
 
-# Initialize MongoDB client
-try:
-    client = AsyncIOMotorClient(MONGO_URI)
-    database = client[MONGO_DB]
-    logger.info("✅ MongoDB connection established successfully!")
-except Exception as e:
-    logger.error(f"❌ Failed to connect to MongoDB: {e}")
-    raise e
 
-# Function to get the MongoDB client
+# Function to get the MongoDB client (created on first use)
 def get_mongo_client():
-    return client
+    global _client
+    if _client is None:
+        logger.info(f"🚀 Connecting to MongoDB at {MONGO_HOST}:{MONGO_PORT}")
+        _client = AsyncIOMotorClient(_build_uri())
+    return _client
+
 
 # Function to close the MongoDB connection (useful for FastAPI shutdown events)
 async def close_mongo_connection():
-    logger.info("🔌 Closing MongoDB connection...")
-    client.close()
-    logger.info("✅ MongoDB connection closed.")
+    global _client
+    if _client is not None:
+        logger.info("🔌 Closing MongoDB connection...")
+        _client.close()
+        _client = None
+        logger.info("✅ MongoDB connection closed.")

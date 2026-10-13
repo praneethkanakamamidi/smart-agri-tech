@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
+﻿from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from src.db_connections.postgresql_conn import Base
 
@@ -7,8 +7,8 @@ class Soil(Base):
     __tablename__ = "soil"
 
     id = Column(Integer, primary_key=True)
-    soil_name = Column(String(10))
-    soil_texture = Column(String(10))
+    soil_name = Column(String(100))
+    soil_texture = Column(String(50))
     description = Column(String(150))
     status = Column(Integer, ForeignKey('miscellaneous_data.id', ondelete='CASCADE'))
     created_by = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))

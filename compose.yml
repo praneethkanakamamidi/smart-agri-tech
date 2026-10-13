@@ -1,70 +1,104 @@
+# Local / staging stack.
+#   docker compose up --build              -> postgres, mongo, migrate+seed (one-shot), backend
+#   docker compose --profile tools up      -> also pgAdmin
+# For live-reload development, run uvicorn on the host instead (see README).
+name: smart-agri-tech
+
+x-backend-env: &backend-env
+  env_file:
+    - ./.env
+  environment:
+    POSTGRES_HOST: smart-agri-tech-postgres
+    POSTGRES_DB_INTERNAL_PORT: "5432"
+    MONGO_HOST: smart-agri-tech-mongo
+    MONGO_PORT: "27017"
+
 services:
+  smart-agri-tech-postgres:
+    image: postgres:16-alpine
+    container_name: smart-agri-tech-postgres
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    ports:
+      - "${POSTGRES_DB_EXTERNAL_PORT:-5432}:5432"
+    volumes:
+      - smart-agri-tech-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - smart-agri-tech-net
+
+  smart-agri-tech-mongo:
+    image: mongo:7
+    container_name: smart-agri-tech-mongo
+    restart: unless-stopped
+    command: ["mongod", "--bind_ip_all"]
+    volumes:
+      - smart-agri-tech-mongo-db:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - smart-agri-tech-net
+
+  # One-shot deploy step: schema migrations, then idempotent reference-data seeding.
+  smart-agri-tech-migrate:
+    build:
+      context: .
+    <<: *backend-env
+    command: ["sh", "-c", "./entrypoint.sh migrate && ./entrypoint.sh seed"]
+    restart: "no"
+    depends_on:
+      smart-agri-tech-postgres:
+        condition: service_healthy
+    networks:
+      - smart-agri-tech-net
+
   smart-agri-tech-backend:
     build:
       context: .
-      dockerfile: Dockerfile
     container_name: smart-agri-tech-backend
+    restart: unless-stopped
+    <<: *backend-env
+    command: ["serve"]
     ports:
-      - "${BACKEND_PORT}:${BACKEND_PORT}"
-    restart: always
-    env_file:
-      - ./.env
+      - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
     volumes:
-      - './:/smart-agri-tech'
-    networks:
-      - smart-agri-tech-net
+      - smart-agri-tech-uploads:/data/uploads
     depends_on:
-      - smart-agri-tech-postgres
-      - smart-agri-tech-mongo
-    environment:
-      - WATCHFILES_FORCE_POLLING=true
-    links:
-      - "smart-agri-tech-postgres"
-      - "smart-agri-tech-mongo"
-
-  smart-agri-tech-postgres:
-    image: postgres:latest
-    container_name: smart-agri-tech-postgres
-    ports:
-      - "${POSTGRES_DB_EXTERNAL_PORT}:${POSTGRES_DB_INTERNAL_PORT}"
-    restart: always
-    env_file:
-      - ./.env
-    volumes:
-      - smart-agri-tech-db:/var/lib/postgresql/data
+      smart-agri-tech-postgres:
+        condition: service_healthy
+      smart-agri-tech-mongo:
+        condition: service_healthy
+      smart-agri-tech-migrate:
+        condition: service_completed_successfully
     networks:
       - smart-agri-tech-net
 
   smart-agri-tech-pgadmin:
+    image: dpage/pgadmin4:8
     container_name: smart-agri-tech-pgadmin
-    image: dpage/pgadmin4
-    restart: always
+    profiles: ["tools"]
+    restart: unless-stopped
     env_file:
       - ./.env
     ports:
-      - "${PGADMIN_PORT}:80"
-    networks:
-      - smart-agri-tech-net
+      - "${PGADMIN_PORT:-5050}:80"
     depends_on:
       - smart-agri-tech-postgres
-
-  smart-agri-tech-mongo:
-    image: mongo:latest
-    container_name: smart-agri-tech-mongo
-    ports:
-      - "27017:27017"
-    restart: always
-    env_file:
-      - ./.env
-    volumes:
-      - smart-agri-tech-mongo-db:/data/db
     networks:
       - smart-agri-tech-net
-    command: ["mongod", "--bind_ip", "0.0.0.0"]
 
 volumes:
   smart-agri-tech-db:
   smart-agri-tech-mongo-db:
+  smart-agri-tech-uploads:
 
 networks:
   smart-agri-tech-net:

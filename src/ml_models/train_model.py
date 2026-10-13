@@ -11,7 +11,6 @@ import pickle
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
-from src.helpers.logging_config import logging  # Not used for now
 
 def load_dataset(filepath: str) -> pd.DataFrame:
     """Loads the dataset from a CSV file."""

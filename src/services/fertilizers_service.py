@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.helpers.serializers import model_to_dict
 from datetime import datetime
 
 from src.data_models.fertilizers_model import Fertilizers
@@ -65,10 +66,12 @@ class FertilizersService:
             result = await db.execute(stmt)
             fertilizer_data = result.scalar_one_or_none()
             if fertilizer_data:
-                fertilizer_data.created_user = fertilizer_data.created_by_user.first_name if fertilizer_data.created_by_user else None
-                fertilizer_data.updated_user = fertilizer_data.updated_by_user.first_name if fertilizer_data.updated_by_user else None
-                fertilizer_data.status_value = fertilizer_data.status_rel.value if fertilizer_data.status_rel else None
-                return fertilizer_data
+                return model_to_dict(
+                    fertilizer_data,
+                    created_user=fertilizer_data.created_by_user.first_name if fertilizer_data.created_by_user else None,
+                    updated_user=fertilizer_data.updated_by_user.first_name if fertilizer_data.updated_by_user else None,
+                    status_value=fertilizer_data.status_rel.value if fertilizer_data.status_rel else None,
+                )
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fertilizer not found")
         except HTTPException:
             raise

@@ -1,25 +1,39 @@
-fastapi
-uvicorn
-sqlalchemy
-psycopg
-asyncpg
-bcrypt
-psycopg2
-secure-smtplib
-pandas
-pyjwt
-passlib
-numpy
-requests
-openai
+# Runtime dependencies, pinned to the versions the test suite runs against.
+# Upgrade deliberately: bump, run `pytest` (with TEST_DATABASE_URL), then commit.
+
+# Web framework / server
+fastapi==0.115.7
+starlette==0.45.3
+uvicorn[standard]==0.34.0
+gunicorn==23.0.0
+python-multipart==0.0.22
+websockets==16.0
+httpx==0.28.1
+
+# Database
+sqlalchemy==2.0.37
+asyncpg==0.30.0
+psycopg2-binary==2.9.10
+alembic==1.19.1
+motor==3.7.0
+pymongo==4.11.1
+
+# Settings / validation
+pydantic==2.11.10
+pydantic-settings==2.10.1
+python-dotenv==1.1.1
+
+# Security
 python-jose==3.3.0
-pydantic>=2.0
-watchfiles
-pydantic-settings
-scikit-learn
-pymongo
-motor
-pymango
-razorpay
-alembic
-python-dotenv
+passlib==1.7.4
+bcrypt==4.2.1
+cryptography==45.0.4
+
+# Payments (razorpay imports pkg_resources, which ships with setuptools < 81)
+razorpay==1.4.2
+setuptools>=68,<81
+
+# Crop recommendation model (keep in step with the versions the pickles were built with)
+numpy==2.2.6
+pandas==2.3.3
+scikit-learn==1.6.1
