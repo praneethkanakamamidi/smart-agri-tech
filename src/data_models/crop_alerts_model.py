@@ -9,7 +9,10 @@ class CropAlerts(Base):
     the vendor gets an in-app notification.
     """
     __tablename__ = "crop_alerts"
-    __table_args__ = (Index('idx_crop_alerts_crop_active', 'crop', 'is_active'),)
+    __table_args__ = (
+        Index('idx_crop_alerts_crop_active', 'crop', 'is_active'),
+        Index('idx_crop_alerts_vendor', 'vendor'),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     vendor = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)

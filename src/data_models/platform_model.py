@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, String, Integer, DateTime, Date, ForeignKey, Boolean, JSON, Text, UniqueConstraint, BigInteger, Time,
-    Numeric,
+    Numeric, Index, text,
 )
 from src.db_connections.postgresql_conn import Base
 
@@ -20,6 +20,7 @@ class PlatformSettings(Base):
 
 class PlatformSettingsHistory(Base):
     __tablename__ = "platform_settings_history"
+    __table_args__ = (Index("idx_platform_settings_history_key", "key", "version"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     key = Column(String(60), nullable=False)
@@ -33,6 +34,11 @@ class PlatformSettingsHistory(Base):
 class AuditLogs(Base):
     """Append-only security and business event history."""
     __tablename__ = "audit_logs"
+    __table_args__ = (
+        Index("idx_audit_logs_entity", "entity_type", "entity_id"),
+        Index("idx_audit_logs_actor", "actor_id"),
+        Index("idx_audit_logs_created", "created_at"),
+    )
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     actor_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)  # null = system
@@ -64,6 +70,7 @@ class IdempotencyKeys(Base):
 class StoredFiles(Base):
     """Uploaded file metadata. Content lives in the storage backend at storage_path."""
     __tablename__ = "stored_files"
+    __table_args__ = (Index("idx_stored_files_owner", "owner_id"),)
 
     id = Column(String(36), primary_key=True)  # uuid4
     owner_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
@@ -80,6 +87,7 @@ class StoredFiles(Base):
 class UserSessions(Base):
     """One row per logged-in device; refresh tokens carry the session's jti."""
     __tablename__ = "user_sessions"
+    __table_args__ = (Index("idx_user_sessions_user", "user_id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
@@ -96,6 +104,7 @@ class UserSessions(Base):
 class DeviceTokens(Base):
     """Push notification tokens."""
     __tablename__ = "device_tokens"
+    __table_args__ = (Index("idx_device_tokens_user", "user_id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
@@ -122,6 +131,11 @@ class OtpCodes(Base):
 class Reports(Base):
     """User reports of abusive users, listings, reviews or messages."""
     __tablename__ = "reports"
+    __table_args__ = (
+        Index("idx_reports_target", "target_type", "target_id", "status"),
+        Index("idx_reports_reporter", "reporter_id"),
+        Index("idx_reports_status", "status", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     reporter_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
@@ -138,7 +152,10 @@ class Reports(Base):
 
 class UserBlocks(Base):
     __tablename__ = "user_blocks"
-    __table_args__ = (UniqueConstraint('blocker_id', 'blocked_id', name='uq_user_block'),)
+    __table_args__ = (
+        UniqueConstraint('blocker_id', 'blocked_id', name='uq_user_block'),
+        Index("idx_user_blocks_blocked", "blocked_id"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     blocker_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
@@ -148,6 +165,10 @@ class UserBlocks(Base):
 
 class AccountAppeals(Base):
     __tablename__ = "account_appeals"
+    __table_args__ = (
+        Index("idx_account_appeals_user", "user_id", "status"),
+        Index("idx_account_appeals_status", "status", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
@@ -180,6 +201,12 @@ class Announcements(Base):
 
 class SupportTickets(Base):
     __tablename__ = "support_tickets"
+    __table_args__ = (
+        Index("idx_support_tickets_user", "user_id", "updated_at"),
+        Index("idx_support_tickets_status", "status", "updated_at"),
+        Index("idx_support_tickets_assigned", "assigned_to", postgresql_where=text("assigned_to IS NOT NULL")),
+        Index("idx_support_tickets_order", "order_id", postgresql_where=text("order_id IS NOT NULL")),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
@@ -196,6 +223,7 @@ class SupportTickets(Base):
 
 class SupportTicketMessages(Base):
     __tablename__ = "support_ticket_messages"
+    __table_args__ = (Index("idx_support_ticket_messages_ticket", "ticket_id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     ticket_id = Column(Integer, ForeignKey('support_tickets.id', ondelete='CASCADE'), nullable=False)
@@ -224,6 +252,10 @@ class NotificationPreferences(Base):
 class NotificationDeliveries(Base):
     """Outbound delivery attempts for a notification on an external channel."""
     __tablename__ = "notification_deliveries"
+    __table_args__ = (
+        Index("idx_notification_deliveries_due", "next_attempt_at", postgresql_where=text("status = 'pending'")),
+        Index("idx_notification_deliveries_notification", "notification_id"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     notification_id = Column(Integer, ForeignKey('notifications.id', ondelete='CASCADE'), nullable=False)
@@ -239,6 +271,12 @@ class NotificationDeliveries(Base):
 class RecurringOrders(Base):
     """A recurring supply agreement proposed by a vendor and approved by the farmer."""
     __tablename__ = "recurring_orders"
+    __table_args__ = (
+        Index("idx_recurring_orders_due", "next_run_date", postgresql_where=text("status = 'active'")),
+        Index("idx_recurring_orders_vendor", "vendor"),
+        Index("idx_recurring_orders_farmer", "farmer"),
+        Index("idx_recurring_orders_listing", "listing_id"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     vendor = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)

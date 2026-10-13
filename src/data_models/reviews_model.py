@@ -10,6 +10,7 @@ class Reviews(Base):
         UniqueConstraint('order_id', 'reviewer', name='uq_reviews_order_reviewer'),
         CheckConstraint('rating BETWEEN 1 AND 5', name='ck_reviews_rating'),
         Index('idx_reviews_reviewee', 'reviewee'),
+        Index('idx_reviews_reviewer', 'reviewer'),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)

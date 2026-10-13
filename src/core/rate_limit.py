@@ -78,12 +78,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                         limit, window, bucket = rule_limit, rule_window, prefix
                         break
             if not limiter.allow(f"{bucket}:{ip}", limit, window):
+                from src.core.observability import error_body
+
                 return JSONResponse(
                     status_code=429,
-                    content={
-                        "detail": "Too many requests. Please slow down and try again shortly.",
-                        "error": {"code": 429, "message": "Too many requests."},
-                    },
+                    content=error_body(429, "Too many requests. Please slow down and try again shortly.", request),
                     headers={"Retry-After": str(window)},
                 )
         return await call_next(request)

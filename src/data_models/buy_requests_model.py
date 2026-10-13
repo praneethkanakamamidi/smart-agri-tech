@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Date, ForeignKey, Float, Boolean, UniqueConstraint, Index
+from sqlalchemy import Column, String, Integer, DateTime, Date, ForeignKey, Float, Boolean, UniqueConstraint, Index, text
 from sqlalchemy.orm import relationship
 from src.db_connections.postgresql_conn import Base
 
@@ -40,7 +40,10 @@ class BuyRequests(Base):
 class BuyRequestInvites(Base):
     """Vendor invited a specific farmer to quote."""
     __tablename__ = "buy_request_invites"
-    __table_args__ = (UniqueConstraint('buy_request_id', 'farmer', name='uq_buy_request_invite'),)
+    __table_args__ = (
+        UniqueConstraint('buy_request_id', 'farmer', name='uq_buy_request_invite'),
+        Index("idx_buy_request_invites_farmer", "farmer"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     buy_request_id = Column(Integer, ForeignKey('buy_requests.id', ondelete='CASCADE'), nullable=False)
@@ -54,6 +57,10 @@ class BuyRequestResponses(Base):
     __table_args__ = (
         Index("idx_buy_request_responses_request", "buy_request_id"),
         Index("idx_buy_request_responses_farmer", "farmer"),
+        Index("idx_buy_request_responses_listing", "farmer_inventory"),
+        Index("idx_buy_request_responses_negotiation", "negotiation_id",
+              postgresql_where=text("negotiation_id IS NOT NULL")),
+        Index("idx_buy_request_responses_order", "order_id", postgresql_where=text("order_id IS NOT NULL")),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)

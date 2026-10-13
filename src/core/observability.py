@@ -103,7 +103,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                 logger.error(f"{request.method} {request.url.path} -> {status} in {elapsed:.0f}ms (request {request_id})")
 
 
-def _error_body(status: int, message, request: Request, details=None) -> dict:
+def error_body(status: int, message, request: Request, details=None) -> dict:
     return {
         "detail": message,
         "error": {
@@ -119,17 +119,17 @@ def _error_body(status: int, message, request: Request, details=None) -> dict:
 def install_error_handlers(app: FastAPI):
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request: Request, exc: StarletteHTTPException):
-        return JSONResponse(status_code=exc.status_code, content=jsonable_encoder(_error_body(exc.status_code, exc.detail, request)),
+        return JSONResponse(status_code=exc.status_code, content=jsonable_encoder(error_body(exc.status_code, exc.detail, request)),
                             headers=getattr(exc, "headers", None))
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):
         details = [{"field": ".".join(str(p) for p in e.get("loc", ())), "message": e.get("msg")} for e in exc.errors()]
-        body = _error_body(422, "Some fields are missing or invalid.", request, details)
+        body = error_body(422, "Some fields are missing or invalid.", request, details)
         body["detail"] = jsonable_encoder(exc.errors())
         return JSONResponse(status_code=422, content=jsonable_encoder(body))
 
     @app.exception_handler(Exception)
     async def unhandled_error(request: Request, exc: Exception):
         logger.exception(f"Unhandled error on {request.method} {request.url.path}: {exc}")
-        return JSONResponse(status_code=500, content=_error_body(500, "Something went wrong. Please try again.", request))
+        return JSONResponse(status_code=500, content=error_body(500, "Something went wrong. Please try again.", request))

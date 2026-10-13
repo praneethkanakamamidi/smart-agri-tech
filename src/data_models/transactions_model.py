@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Numeric, JSON
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Numeric, JSON, Index, text
 from sqlalchemy.orm import relationship
 from src.db_connections.postgresql_conn import Base
 
@@ -16,6 +16,10 @@ PAYMENT_STATE_NAMES = {
 class Transactions(Base):
     """A payment attempt against an order (gateway, UPI, bank transfer or cash)."""
     __tablename__ = "transactions"
+    __table_args__ = (
+        Index("idx_transactions_order_status", "order_id", "status"),
+        Index("idx_transactions_status_created", "status", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(Integer, ForeignKey('orders.id', ondelete='CASCADE'))
@@ -42,6 +46,13 @@ class Transactions(Base):
 class Refunds(Base):
     """Refund / financial adjustment. Never edits the original payment record."""
     __tablename__ = "refunds"
+    __table_args__ = (
+        Index("idx_refunds_order_status", "order_id", "status"),
+        Index("idx_refunds_status_created", "status", "created_at"),
+        Index("idx_refunds_gateway_id", "gateway_refund_id", postgresql_where=text("gateway_refund_id IS NOT NULL")),
+        Index("idx_refunds_transaction", "transaction_id", postgresql_where=text("transaction_id IS NOT NULL")),
+        Index("idx_refunds_dispute", "dispute_id", postgresql_where=text("dispute_id IS NOT NULL")),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(Integer, ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
@@ -61,6 +72,10 @@ class Refunds(Base):
 class Settlements(Base):
     """What the platform owes the farmer for a completed order."""
     __tablename__ = "settlements"
+    __table_args__ = (
+        Index("idx_settlements_farmer_created", "farmer", "created_at"),
+        Index("idx_settlements_status_created", "status", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(Integer, ForeignKey('orders.id', ondelete='CASCADE'), unique=True, nullable=False)

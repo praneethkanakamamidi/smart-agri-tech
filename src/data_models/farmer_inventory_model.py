@@ -26,6 +26,13 @@ class FarmerInventory(Base):
     __table_args__ = (
         Index("idx_listing_farmer", "created_by"),
         Index("idx_listing_market", "status", "crop", postgresql_where=text("deleted_at IS NULL")),
+        Index("idx_listing_crop", "crop"),
+        # Default marketplace feed: active listings, newest first.
+        Index("idx_listing_feed_recent", text("created_at DESC NULLS LAST"), text("id DESC"),
+              postgresql_where=text("status = 'active' AND deleted_at IS NULL")),
+        Index("idx_listing_available_until", "available_until", postgresql_where=text("available_until IS NOT NULL")),
+        Index("idx_listing_soil", "soil", postgresql_where=text("soil IS NOT NULL")),
+        Index("idx_listing_fertilizer", "fertilizer", postgresql_where=text("fertilizer IS NOT NULL")),
     )
 
     id = Column(Integer, primary_key=True)

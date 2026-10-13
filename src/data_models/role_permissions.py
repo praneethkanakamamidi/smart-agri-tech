@@ -1,9 +1,10 @@
-from sqlalchemy import Column, Integer, ForeignKey, TIMESTAMP
+from sqlalchemy import Column, Integer, ForeignKey, TIMESTAMP, Index
 from src.db_connections.postgresql_conn import Base
 
 class RolePermissions(Base):
     __tablename__ = "role_permissions"
-    
+    __table_args__ = (Index("idx_role_permissions_role", "role_id"),)
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     role_id = Column(Integer, ForeignKey('roles.id', ondelete='CASCADE'))
     permission_id = Column(Integer, ForeignKey('permissions.id', ondelete='CASCADE'))

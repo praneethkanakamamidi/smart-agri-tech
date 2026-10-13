@@ -1,9 +1,13 @@
-from sqlalchemy import Column, String, Integer, DateTime, Date, ForeignKey, Numeric, UniqueConstraint
+from sqlalchemy import Column, String, Integer, DateTime, Date, ForeignKey, Numeric, UniqueConstraint, Index, text
 from src.db_connections.postgresql_conn import Base
 
 
 class ListingImages(Base):
     __tablename__ = "listing_images"
+    __table_args__ = (
+        Index("idx_listing_images_listing", "listing_id", "sort_order"),
+        Index("idx_listing_images_file", "file_id"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     listing_id = Column(Integer, ForeignKey('farmer_inventory.id', ondelete='CASCADE'), nullable=False)
@@ -26,6 +30,11 @@ class ListingPriceTiers(Base):
 class ListingCertifications(Base):
     """Optional certificate (organic, lab test, inspection). Shown as verified only after admin review."""
     __tablename__ = "listing_certifications"
+    __table_args__ = (
+        Index("idx_listing_certifications_listing", "listing_id"),
+        Index("idx_listing_certifications_status", "status", "created_at"),
+        Index("idx_listing_certifications_file", "file_id", postgresql_where=text("file_id IS NOT NULL")),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     listing_id = Column(Integer, ForeignKey('farmer_inventory.id', ondelete='CASCADE'), nullable=False)
@@ -43,7 +52,10 @@ class ListingCertifications(Base):
 class SavedListings(Base):
     """Vendor wishlist of listings; saved_price lets us notify on price changes."""
     __tablename__ = "saved_listings"
-    __table_args__ = (UniqueConstraint('user_id', 'listing_id', name='uq_saved_listing'),)
+    __table_args__ = (
+        UniqueConstraint('user_id', 'listing_id', name='uq_saved_listing'),
+        Index("idx_saved_listings_listing", "listing_id"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
@@ -55,6 +67,10 @@ class SavedListings(Base):
 class InventoryReservations(Base):
     """Stock held for an order. Released on cancellation/expiry, consumed on delivery."""
     __tablename__ = "inventory_reservations"
+    __table_args__ = (
+        Index("idx_inventory_reservations_order", "order_id", "status"),
+        Index("idx_inventory_reservations_listing", "listing_id"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     listing_id = Column(Integer, ForeignKey('farmer_inventory.id', ondelete='CASCADE'), nullable=False)
@@ -70,6 +86,7 @@ class InventoryReservations(Base):
 class InventoryMovements(Base):
     """Append-only stock ledger for a listing."""
     __tablename__ = "inventory_movements"
+    __table_args__ = (Index("idx_inventory_movements_listing", "listing_id", "created_at"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     listing_id = Column(Integer, ForeignKey('farmer_inventory.id', ondelete='CASCADE'), nullable=False)
@@ -88,6 +105,10 @@ class InventoryMovements(Base):
 class HarvestPlans(Base):
     """Farmer's upcoming harvest; can be published as a pre-harvest listing."""
     __tablename__ = "harvest_plans"
+    __table_args__ = (
+        Index("idx_harvest_plans_farmer_date", "farmer", "expected_harvest_date"),
+        Index("idx_harvest_plans_listing", "listing_id", postgresql_where=text("listing_id IS NOT NULL")),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     farmer = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
