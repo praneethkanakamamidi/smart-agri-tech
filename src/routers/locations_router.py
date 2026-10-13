@@ -14,20 +14,40 @@ def location_service() -> LocationService:
     return LocationService()
 
 
-@router.post("/states/")
+# Public: reference data the registration form needs before the user has an account.
+@router.get("/states")
+async def list_states(
+    db: AsyncSession = Depends(get_db_async),
+    service: LocationService = Depends(location_service),
+):
+    return await service.get_states(db)
+
+
+@router.get("/states/{state_id}/districts")
+async def list_districts(
+    state_id: int,
+    db: AsyncSession = Depends(get_db_async),
+    service: LocationService = Depends(location_service),
+):
+    return await service.get_districts(state_id, db)
+
+
+@router.post("/states/", deprecated=True)
 async def post_states(
     db: AsyncSession = Depends(get_db_async),
     service: LocationService = Depends(location_service),
     user: Users = Depends(get_current_active_user),
 ):
+    """Deprecated: use GET /api/states."""
     return await service.get_states(db)
 
 
-@router.put("/districts/{id}")
+@router.put("/districts/{id}", deprecated=True)
 async def put_districts(
     id: int,
     db: AsyncSession = Depends(get_db_async),
     service: LocationService = Depends(location_service),
     user: Users = Depends(get_current_active_user),
 ):
+    """Deprecated: use GET /api/states/{state_id}/districts."""
     return await service.get_districts(id, db)

@@ -1,0 +1,13 @@
+{
+  "source": "Values referenced by application code (see docs/seeding.md for where each is used)",
+  "miscellaneous_data": {
+    "status": ["active", "inactive", "suspended"],
+    "answer": ["yes"],
+    "order_status": [
+      "pending_confirmation", "confirmed", "preparing", "ready_for_pickup", "in_transit", "delivered",
+      "completed", "cancelled", "delivery_failed", "disputed", "refund_pending", "refunded"
+    ],
+    "payment_status": ["initiated", "pending", "paid", "failed", "refund_pending", "refunded"]
+  },
+  "roles": ["farmer", "vendor", "admin"]
+}

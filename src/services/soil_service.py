@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.helpers.serializers import model_to_dict
 from datetime import datetime
 
 from src.data_models.soil_model import Soil
@@ -63,10 +64,12 @@ class SoilService:
             result = await db.execute(stmt)
             soil_data = result.scalar_one_or_none()
             if soil_data:
-                soil_data.created_user = soil_data.created_by_user.first_name if soil_data.created_by_user else None
-                soil_data.updated_user = soil_data.updated_by_user.first_name if soil_data.updated_by_user else None
-                soil_data.status_value = soil_data.status_rel.value if soil_data.status_rel else None
-                return soil_data
+                return model_to_dict(
+                    soil_data,
+                    created_user=soil_data.created_by_user.first_name if soil_data.created_by_user else None,
+                    updated_user=soil_data.updated_by_user.first_name if soil_data.updated_by_user else None,
+                    status_value=soil_data.status_rel.value if soil_data.status_rel else None,
+                )
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Soil not found")
         except HTTPException:
             raise

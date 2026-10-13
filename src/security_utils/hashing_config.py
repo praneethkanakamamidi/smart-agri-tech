@@ -1,5 +1,4 @@
 from passlib.context import CryptContext
-from typing import Optional
 
 class Hashing:
     def __init__(self, hash_rounds: int = 12):

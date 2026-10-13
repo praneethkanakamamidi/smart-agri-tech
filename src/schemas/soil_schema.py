@@ -1,6 +1,4 @@
 from pydantic import BaseModel
-from datetime import datetime
-from typing import List
 
 class SoilSchema(BaseModel):
     soil_name :str =None

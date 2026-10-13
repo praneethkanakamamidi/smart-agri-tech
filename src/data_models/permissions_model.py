@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, TIMESTAMP
+from sqlalchemy import Column, String, Integer, ForeignKey, TIMESTAMP
 from src.db_connections.postgresql_conn import Base
 
 class Permissions(Base):
