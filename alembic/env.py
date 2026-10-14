@@ -31,6 +31,29 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+# Expression indexes created with raw SQL in migrations (PostGIS geography points, full-text
+# search). Autogenerate can't round-trip their expressions, so the drift check skips them.
+UNMANAGED_INDEXES = {
+    "idx_farmer_profiles_geo", "idx_vendor_profiles_geo", "idx_listing_pickup_geo", "idx_listing_embeddings_fts",
+}
+# PostGIS creates this table in the public schema; it is not ours to manage.
+UNMANAGED_TABLES = {"spatial_ref_sys"}
+
+
+def include_object(obj, name, type_, reflected, compare_to):
+    if type_ == "index" and (name in UNMANAGED_INDEXES or (name or "").startswith("idx_listing_emb_ann_")):
+        return False
+    if type_ == "table" and name in UNMANAGED_TABLES:
+        return False
+    return True
+
+
+def compare_type(context, inspected_column, metadata_column, inspected_type, metadata_type):
+    # pgvector columns are dimension-free by design (one row per embedding model version).
+    if type(metadata_type).__name__ in ("VECTOR", "Vector"):
+        return False
+    return None  # default comparison for everything else
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -50,6 +73,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
+        compare_type=compare_type,
     )
 
     with context.begin_transaction():
@@ -73,6 +98,8 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            include_object=include_object,
+            compare_type=compare_type,
         )
 
         with context.begin_transaction():

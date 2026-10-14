@@ -157,7 +157,10 @@ class ListingsService:
             status=ACTIVE if payload.publish else DRAFT,
             reserved_qty=D(0), sold_qty=D(0), views_count=0, inquiries_count=0,
             created_by=farmer.id, created_at=now, updated_at=now,
+            pickup_latitude=payload.pickup_latitude, pickup_longitude=payload.pickup_longitude,
         )
+        if (payload.pickup_latitude is None) != (payload.pickup_longitude is None):
+            raise HTTPException(status_code=422, detail="Send pickup_latitude and pickup_longitude together.")
         db.add(listing)
         await db.flush()
         inventory_core.initial_ledger(db, listing, farmer.id)
@@ -187,9 +190,11 @@ class ListingsService:
             fields.get("availability_date", listing.availability_date),
         )
         for field in ("variety", "harvest_date", "available_until", "availability_date", "packaging",
-                      "description", "batch_code", "organic_claim"):
+                      "description", "batch_code", "organic_claim", "pickup_latitude", "pickup_longitude"):
             if field in fields:
                 setattr(listing, field, fields[field])
+        if (listing.pickup_latitude is None) != (listing.pickup_longitude is None):
+            raise HTTPException(status_code=422, detail="Send pickup_latitude and pickup_longitude together.")
         if "organic_claim" in fields and not fields["organic_claim"]:
             listing.organic_verified = False
         if "min_order_qty" in fields:

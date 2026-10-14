@@ -18,6 +18,8 @@ class FarmerProfileSchema(BaseModel):
     bank_account_number: Optional[str] = Field(None, min_length=6, max_length=20)
     bank_ifsc: Optional[str] = Field(None, pattern=r"^[A-Za-z]{4}0[A-Za-z0-9]{6}$")
     upi_id: Optional[str] = Field(None, pattern=r"^[\w.\-]{2,}@[A-Za-z]{2,}$")
+    latitude: Optional[float] = Field(None, ge=-90, le=90, description="Farm location (e.g. from the phone's GPS).")
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
 
 
 class VendorProfileSchema(BaseModel):
@@ -34,6 +36,8 @@ class VendorProfileSchema(BaseModel):
     billing_address: Optional[str] = Field(None, max_length=255)
     delivery_preference: Optional[Literal["pickup", "farmer_delivery", "vendor_transport", "third_party"]] = None
     payment_preference: Optional[Literal["full_advance", "partial_advance", "pay_before_dispatch", "pay_on_delivery", "cash_on_delivery"]] = None
+    latitude: Optional[float] = Field(None, ge=-90, le=90, description="Business/delivery location.")
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
 
 
 class VerificationRequestSchema(BaseModel):

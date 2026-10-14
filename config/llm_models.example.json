@@ -1,0 +1,70 @@
+[
+  {
+    "id": "claude-fast",
+    "provider": "anthropic",
+    "model": "claude-haiku-5-5",
+    "tier": "fast",
+    "capabilities": ["text", "structured_output", "tool_calling", "vision"],
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "timeout_s": 30,
+    "input_cost_per_mtok": null,
+    "output_cost_per_mtok": null
+  },
+  {
+    "id": "claude-standard",
+    "provider": "anthropic",
+    "model": "claude-sonnet-5-5",
+    "tier": "standard",
+    "capabilities": ["text", "structured_output", "tool_calling", "vision"],
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "timeout_s": 60,
+    "input_cost_per_mtok": null,
+    "output_cost_per_mtok": null
+  },
+  {
+    "id": "claude-strong",
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "tier": "strong",
+    "capabilities": ["text", "structured_output", "tool_calling", "vision"],
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "timeout_s": 120,
+    "input_cost_per_mtok": null,
+    "output_cost_per_mtok": null
+  },
+  {
+    "id": "local-text",
+    "provider": "openai_compatible",
+    "model": "llama3",
+    "base_url": "http://localhost:11434/v1",
+    "requires_api_key": false,
+    "tier": "fast",
+    "capabilities": ["text", "structured_output"],
+    "structured_mode": "json_schema",
+    "timeout_s": 60,
+    "enabled": false
+  },
+  {
+    "id": "local-vision",
+    "provider": "openai_compatible",
+    "model": "qwen2.5vl:7b",
+    "base_url": "http://localhost:11434/v1",
+    "requires_api_key": false,
+    "tier": "standard",
+    "capabilities": ["text", "structured_output", "vision"],
+    "structured_mode": "json_schema",
+    "timeout_s": 120,
+    "enabled": false
+  },
+  {
+    "id": "speech-to-text",
+    "provider": "openai_compatible",
+    "model": "whisper-1",
+    "base_url": "https://api.openai.com/v1",
+    "api_key_env": "OPENAI_API_KEY",
+    "tier": "fast",
+    "capabilities": ["audio_transcription"],
+    "timeout_s": 60,
+    "enabled": false
+  }
+]

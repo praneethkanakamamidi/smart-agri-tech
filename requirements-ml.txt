@@ -1,0 +1,10 @@
+# Local embedding and reranking models (Sentence Transformers). Installed in the Docker image
+# by default; skip it (and set EMBEDDING_PROVIDER=hashing) for a lightweight dev/CI install.
+# The CPU index keeps torch at ~200 MB instead of pulling CUDA libraries.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.10.0
+sentence-transformers==6.1.0
+transformers==5.19.0
+huggingface_hub==1.33.0
+tokenizers==0.23.3
+safetensors==0.8.0
