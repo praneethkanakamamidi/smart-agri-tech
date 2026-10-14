@@ -25,6 +25,24 @@ async def upload_file(
     return await service.upload(user, file, purpose, db)
 
 
+@router.get("/files/signed/{token}")
+async def download_signed_file(token: str, db: AsyncSession = Depends(get_db_async),
+                               service: FilesService = Depends(files_service)):
+    """Download through a short-lived signed link from GET /api/files/{file_id}/link (no bearer token)."""
+    return await service.download_signed(token, db)
+
+
+@router.get("/files/{file_id}/link")
+async def file_link(
+    file_id: str,
+    db: AsyncSession = Depends(get_db_async),
+    service: FilesService = Depends(files_service),
+    user: Users = Depends(current_user_with_role),
+):
+    """A signed link valid for 5 minutes, for clients that can't send the Authorization header."""
+    return await service.signed_link(file_id, user, user.role_name, db)
+
+
 @router.get("/files/{file_id}")
 async def download_file(
     file_id: str,

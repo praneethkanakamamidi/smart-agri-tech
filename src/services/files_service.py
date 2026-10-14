@@ -1,4 +1,7 @@
 import hashlib
+import hmac
+import os
+import time
 import uuid
 from datetime import datetime
 
@@ -19,7 +22,10 @@ from src.data_models.users_model import Users
 
 IMAGES = {"image/jpeg", "image/png", "image/webp"}
 IMAGES_AND_PDF = IMAGES | {"application/pdf"}
-EXTENSIONS = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf"}
+AUDIO = {"audio/wav", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/webm"}
+EXTENSIONS = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf",
+              "audio/wav": "wav", "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/webm": "webm"}
+SIGNED_LINK_SECONDS = 300
 
 # purpose -> allowed content types
 PURPOSES = {
@@ -31,6 +37,7 @@ PURPOSES = {
     "pickup_proof": IMAGES,
     "certification": IMAGES_AND_PDF,
     "support_attachment": IMAGES_AND_PDF,
+    "voice_note": AUDIO,  # owner only; transcribed for the assistant
 }
 PUBLIC_PURPOSES = {"listing_image"}
 
@@ -139,6 +146,53 @@ class FilesService:
                 "Cache-Control": "private, max-age=3600",
             },
         )
+
+    # ---- short-lived signed links ----------------------------------------------------------------
+
+    @staticmethod
+    def _link_secret() -> bytes:
+        secret = os.getenv("FILE_LINK_SECRET") or os.getenv("ACCESS_TOKEN")
+        if not secret:
+            raise HTTPException(status_code=503, detail="File links are not configured.")
+        return secret.encode()
+
+    @classmethod
+    def _sign(cls, file_id: str, user_id: int, expires: int) -> str:
+        message = f"{file_id}.{user_id}.{expires}".encode()
+        return hmac.new(cls._link_secret(), message, hashlib.sha256).hexdigest()[:32]
+
+    async def signed_link(self, file_id: str, user: Users, role: str | None, db: AsyncSession) -> dict:
+        """A link that works without the bearer token for SIGNED_LINK_SECONDS (e.g. for an <img> tag)."""
+        f = (await db.execute(select(StoredFiles).where(
+            StoredFiles.id == file_id, StoredFiles.deleted_at.is_(None)
+        ))).scalar_one_or_none()
+        if not f or not await self._can_access(user, role, f, db):
+            raise HTTPException(status_code=404, detail="File not found.")
+        expires = int(time.time()) + SIGNED_LINK_SECONDS
+        token = f"{file_id}.{user.id}.{expires}.{self._sign(file_id, user.id, expires)}"
+        return {"url": f"/api/files/signed/{token}", "expires_at": datetime.utcfromtimestamp(expires)}
+
+    async def download_signed(self, token: str, db: AsyncSession) -> Response:
+        try:
+            file_id, user_id, expires, signature = token.rsplit(".", 3)
+            expected = self._sign(file_id, int(user_id), int(expires))
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=404, detail="File not found.")
+        if not hmac.compare_digest(signature, expected) or int(expires) < time.time():
+            raise HTTPException(status_code=404, detail="This link has expired.")
+        f = (await db.execute(select(StoredFiles).where(
+            StoredFiles.id == file_id, StoredFiles.deleted_at.is_(None)
+        ))).scalar_one_or_none()
+        if not f:
+            raise HTTPException(status_code=404, detail="File not found.")
+        try:
+            content = storage.read(f.storage_path)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="File content is missing.")
+        return Response(content=content, media_type=f.content_type, headers={
+            "Content-Disposition": f'inline; filename="{f.id}.{EXTENSIONS.get(f.content_type, "bin")}"',
+            "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store",
+        })
 
     async def delete(self, file_id: str, user: Users, db: AsyncSession) -> dict:
         f = (await db.execute(select(StoredFiles).where(StoredFiles.id == file_id))).scalar_one_or_none()

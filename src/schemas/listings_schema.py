@@ -33,6 +33,8 @@ class ListingCreateSchema(BaseModel):
     publish: bool = True  # false = save as draft
     fertilizer: Optional[int] = None
     soil: Optional[int] = None
+    pickup_latitude: Optional[float] = Field(None, ge=-90, le=90, description="Only if not at the profile's farm location.")
+    pickup_longitude: Optional[float] = Field(None, ge=-180, le=180)
 
 
 class ListingUpdateSchema(BaseModel):
@@ -52,6 +54,8 @@ class ListingUpdateSchema(BaseModel):
     organic_claim: Optional[bool] = None
     delivery_options: Optional[list[DeliveryOption]] = None
     low_stock_threshold: Optional[float] = Field(None, ge=0)
+    pickup_latitude: Optional[float] = Field(None, ge=-90, le=90)
+    pickup_longitude: Optional[float] = Field(None, ge=-180, le=180)
 
 
 class ListingImagesSchema(BaseModel):

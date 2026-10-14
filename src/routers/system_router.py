@@ -44,7 +44,28 @@ async def readiness(db: AsyncSession = Depends(get_db_async)):
     healthy = all(v == "ok" for v in checks.values())
     if not healthy:
         raise HTTPException(status_code=503, detail={"status": "degraded", "checks": checks})
-    return {"status": "ok", "checks": checks}
+    return {"status": "ok", "checks": checks, "components": await _agent_components(db)}
+
+
+async def _agent_components(db: AsyncSession) -> dict:
+    """Optional components: reported for operators, never failing readiness (the marketplace works without them)."""
+    from src.agents.runtime import runtime
+
+    components = {"agents": "ok" if runtime.ready else f"unavailable: {runtime.error or 'not started'}"}
+    try:
+        extensions = set((await db.execute(text(
+            "SELECT extname FROM pg_extension WHERE extname IN ('postgis', 'vector')"))).scalars().all())
+        components["postgis"] = "ok" if "postgis" in extensions else "missing"
+        components["pgvector"] = "ok" if "vector" in extensions else "missing"
+    except Exception as e:
+        components["extensions"] = f"error: {e.__class__.__name__}"
+    if runtime.ready:
+        from src.agents.llm import get_router
+
+        router = get_router()
+        components["llm_models_available"] = len(router.registry.available())
+        components["llm_circuits_open"] = sum(1 for s in router.circuit.snapshot().values() if s["open"])
+    return components
 
 
 @router.get("/metrics", response_class=PlainTextResponse)

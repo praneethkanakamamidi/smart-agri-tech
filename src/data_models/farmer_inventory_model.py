@@ -12,8 +12,9 @@ EXPIRED = "expired"
 REMOVED = "removed"  # taken down by moderation
 ARCHIVED = "archived"  # deleted by the farmer but kept because orders reference it
 
-# Columns that must never be shown to anyone but the listing's farmer.
-PRIVATE_LISTING_FIELDS = {"min_acceptable_price", "low_stock_threshold"}
+# Columns that must never be shown to anyone but the listing's farmer. Exact pickup coordinates
+# are private too: buyers see the computed distance, not the location.
+PRIVATE_LISTING_FIELDS = {"min_acceptable_price", "low_stock_threshold", "pickup_latitude", "pickup_longitude"}
 
 
 class FarmerInventory(Base):
@@ -68,6 +69,9 @@ class FarmerInventory(Base):
     low_stock_threshold = Column(Numeric(12, 2), nullable=True)
     moderation_reason = Column(String(255), nullable=True)
     deleted_at = Column(DateTime, nullable=True)
+    # Optional pickup point when the produce isn't at the farm location on the farmer's profile.
+    pickup_latitude = Column(Numeric(9, 6), nullable=True)
+    pickup_longitude = Column(Numeric(9, 6), nullable=True)
 
     crop_rel = relationship("Crops", foreign_keys=[crop], lazy="raise")
     soil_rel = relationship("Soil", foreign_keys=[soil], lazy="raise")

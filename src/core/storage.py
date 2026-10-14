@@ -48,4 +48,15 @@ def detect_content_type(content: bytes) -> str | None:
             return content_type
     if content[:4] == b"RIFF" and content[8:12] == b"WEBP":
         return "image/webp"
+    # Audio (voice notes for the assistant).
+    if content[:4] == b"RIFF" and content[8:12] == b"WAVE":
+        return "audio/wav"
+    if content.startswith(b"OggS"):
+        return "audio/ogg"
+    if content.startswith(b"ID3") or content[:2] in (b"\xff\xfb", b"\xff\xf3", b"\xff\xf2"):
+        return "audio/mpeg"
+    if content[4:8] == b"ftyp" and content[8:12] in (b"M4A ", b"mp42", b"isom"):
+        return "audio/mp4"
+    if content.startswith(b"\x1a\x45\xdf\xa3"):
+        return "audio/webm"
     return None

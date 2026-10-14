@@ -45,6 +45,8 @@ from src.routers.assistant_router import router as assistant_router
 from src.routers.support_router import router as support_router
 from src.routers.admin_router import router as admin_router
 from src.routers.system_router import router as system_router
+from src.routers.agents_router import router as agents_router
+from src.agents.runtime import runtime as agent_runtime
 
 
 HOST = "0.0.0.0"
@@ -63,11 +65,13 @@ async def lifespan(app: FastAPI):
     stop = asyncio.Event()
     task = asyncio.create_task(scheduler_loop(stop)) if scheduler_enabled() else None
     await start_pubsub()
+    await agent_runtime.start()  # never blocks startup: agent endpoints return 503 if it isn't ready
     yield
     logger.info("Shutting down Smart-Agri-Tech API...")
     stop.set()
     if task:
         await task
+    await agent_runtime.stop()
     await stop_pubsub()
     await close_mongo_connection()
     await dispose_engines()
@@ -93,7 +97,7 @@ for router in (
     market_router, negotiations_router, orders_router, payment_router, payments_history_router,
     notifications_router, inbox_router, reviews_router, buy_requests_router, vendor_tools_router,
     expenses_router, insights_router, disputes_router, planning_router, assistant_router, support_router,
-    admin_router, system_router,
+    admin_router, system_router, agents_router,
 ):
     smart_agri_tech_app.include_router(router)
 
@@ -124,4 +128,6 @@ async def home():
 
 if __name__ == "__main__":
     # Development server with auto-reload (production uses gunicorn: ./entrypoint.sh serve).
+    # With reload, uvicorn runs the app on the selector event loop on Windows, which psycopg's async
+    # mode (the LangGraph checkpointer) requires.
     uvicorn.run("main:smart_agri_tech_app", host=HOST, port=PORT, reload=True, reload_dirs=["src"])
