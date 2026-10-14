@@ -167,6 +167,53 @@ async def job_price_alerts(db):
     return await InsightsService.price_change_alerts(db)
 
 
+async def job_agent_embeddings(db):
+    """Re-embed listings whose text changed (or are new) and purge rows of removed listings."""
+    from src.agents.config import settings
+
+    if not settings().enabled:
+        return "agents disabled"
+    from src.agents.retrieval.indexer import reindex_stale
+
+    return await reindex_stale(db, batch=200)
+
+
+async def job_agent_retention(db):
+    """
+    Retention for agent data:
+    - workflow events and model-call logs: AGENT_EVENT_RETENTION_DAYS / AGENT_MODEL_CALL_RETENTION_DAYS;
+    - tool-call log: AGENT_TOOL_CALL_RETENTION_DAYS, except mutations, which are kept with the
+      audit log (they are the record of who approved what);
+    - photos uploaded only for analysis (listing_image never attached to a listing):
+      UNUSED_ANALYSIS_IMAGE_RETENTION_DAYS. Dispute evidence is never deleted here.
+    """
+    from src.agents.config import settings
+    from src.core.storage import storage
+    from src.data_models.agents_model import AgentModelCalls, AgentToolCalls, AgentWorkflowEvents
+    from src.data_models.listing_extras_model import ListingImages
+    from src.data_models.platform_model import StoredFiles
+
+    cfg = settings()
+    now = datetime.utcnow()
+    events = await db.execute(AgentWorkflowEvents.__table__.delete().where(
+        AgentWorkflowEvents.created_at < now - timedelta(days=cfg.event_retention_days)))
+    calls = await db.execute(AgentModelCalls.__table__.delete().where(
+        AgentModelCalls.created_at < now - timedelta(days=cfg.model_call_retention_days)))
+    tools = await db.execute(AgentToolCalls.__table__.delete().where(
+        AgentToolCalls.created_at < now - timedelta(days=cfg.tool_call_retention_days), AgentToolCalls.kind != "mutate"))
+    orphans = (await db.execute(select(StoredFiles).where(
+        StoredFiles.purpose == "listing_image", StoredFiles.deleted_at.is_(None),
+        StoredFiles.created_at < now - timedelta(days=cfg.unused_image_retention_days),
+        ~select(ListingImages.id).where(ListingImages.file_id == StoredFiles.id).exists(),
+    ).limit(200))).scalars().all()
+    for f in orphans:
+        f.deleted_at = now
+        storage.delete(f.storage_path)
+    await db.commit()
+    return {"events": events.rowcount, "model_calls": calls.rowcount, "tool_calls": tools.rowcount,
+            "unused_images": len(orphans)}
+
+
 FREQUENT_JOBS = (
     ("expire_offers", job_expire_offers),
     ("confirmation_timeouts", job_confirmation_timeouts),
@@ -177,10 +224,12 @@ HOURLY_JOBS = (
     ("auto_complete", job_auto_complete),
     ("recurring", job_recurring),
     ("close_buy_requests", job_close_buy_requests),
+    ("agent_embeddings", job_agent_embeddings),
 )
 DAILY_JOBS = (
     ("account_deletion", job_account_deletion),
     ("price_alerts", job_price_alerts),
+    ("agent_retention", job_agent_retention),
 )
 
 

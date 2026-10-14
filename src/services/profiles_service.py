@@ -25,6 +25,22 @@ VENDOR_FIELDS = (
 )
 
 
+async def _set_location(profile, payload, address_fields: tuple[str, ...]):
+    """GPS/manual coordinates win; otherwise geocode a changed address if a geocoder is configured."""
+    if (payload.latitude is None) != (payload.longitude is None):
+        raise HTTPException(status_code=422, detail="Send latitude and longitude together.")
+    if payload.latitude is not None:
+        profile.latitude, profile.longitude, profile.location_source = payload.latitude, payload.longitude, "gps"
+        return
+    address = ", ".join(str(getattr(payload, f)) for f in address_fields if getattr(payload, f, None))
+    if address and profile.location_source != "gps":
+        from src.agents.integrations.maps import get_geocoder
+
+        point = await get_geocoder().geocode(address)
+        if point:
+            profile.latitude, profile.longitude, profile.location_source = point.lat, point.lon, "geocoded"
+
+
 def _farmer_view(profile: FarmerProfiles | None) -> dict | None:
     if not profile:
         return None
@@ -72,6 +88,7 @@ class ProfilesService:
         if payload.upi_id:
             profile.upi_id_enc = encrypt(payload.upi_id)
             payout_changed = True
+        await _set_location(profile, payload, ("farm_address", "village", "pincode"))
         profile.updated_at = now
         if payload.district and not user.district:
             user.state, user.district = payload.state, payload.district
@@ -92,6 +109,7 @@ class ProfilesService:
             value = getattr(payload, field)
             if value is not None:
                 setattr(profile, field, value.upper() if field == "gstin" else value)
+        await _set_location(profile, payload, ("business_address", "pincode"))
         profile.updated_at = now
         if payload.district and not user.district:
             user.state, user.district = payload.state, payload.district

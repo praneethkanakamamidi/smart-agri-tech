@@ -23,6 +23,10 @@ class FarmerProfiles(Base):
     bank_account_number_enc = Column(String(512))
     bank_ifsc = Column(String(15))
     upi_id_enc = Column(String(512))
+    # Farm location (WGS84). Radius matching uses PostGIS on these (see migration 006).
+    latitude = Column(Numeric(9, 6), nullable=True)
+    longitude = Column(Numeric(9, 6), nullable=True)
+    location_source = Column(String(20))  # gps | geocoded | manual
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
 
@@ -46,6 +50,10 @@ class VendorProfiles(Base):
     billing_address = Column(String(255))
     delivery_preference = Column(String(30))
     payment_preference = Column(String(30))
+    # Business / delivery location (WGS84), the default origin for supplier discovery.
+    latitude = Column(Numeric(9, 6), nullable=True)
+    longitude = Column(Numeric(9, 6), nullable=True)
+    location_source = Column(String(20))  # gps | geocoded | manual
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
 

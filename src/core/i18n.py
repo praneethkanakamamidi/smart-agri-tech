@@ -59,6 +59,8 @@ TEMPLATES: dict[str, dict[str, tuple[str, str]]] = {
         "announcement": ("{title}", "{body}"),
         "order_adjustment": ("Order amount corrected", "Order {order_number} was adjusted by ₹{amount}: {reason}"),
         "listing_moderated": ("Listing update", "Your {crop} listing was {status}. {reason}"),
+        "agent_approval_needed": ("Approval needed", "Your assistant is waiting for your approval: {summary}"),
+        "agent_update": ("Assistant update", "{summary}"),
     },
     "te": {
         "offer_received": ("కొత్త ఆఫర్ వచ్చింది", "{party} {crop} {quantity} {unit} కు ₹{price}/{unit} ఆఫర్ చేశారు."),
@@ -111,6 +113,8 @@ TEMPLATES: dict[str, dict[str, tuple[str, str]]] = {
         "announcement": ("{title}", "{body}"),
         "order_adjustment": ("ఆర్డర్ మొత్తం సవరణ", "ఆర్డర్ {order_number} ₹{amount} సవరించబడింది: {reason}"),
         "listing_moderated": ("లిస్టింగ్ అప్‌డేట్", "మీ {crop} లిస్టింగ్ {status}. {reason}"),
+        "agent_approval_needed": ("ఆమోదం అవసరం", "మీ అసిస్టెంట్ మీ ఆమోదం కోసం వేచి ఉంది: {summary}"),
+        "agent_update": ("అసిస్టెంట్ అప్‌డేట్", "{summary}"),
     },
 }
 

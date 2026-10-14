@@ -34,3 +34,7 @@ from src.data_models.platform_model import (  # noqa: F401
     DeviceTokens, OtpCodes, Reports, UserBlocks, AccountAppeals, Announcements, SupportTickets,
     SupportTicketMessages, NotificationPreferences, NotificationDeliveries, RecurringOrders,
 )
+from src.data_models.agents_model import (  # noqa: F401
+    AgentWorkflowRuns, AgentWorkflowEvents, AgentApprovalRequests, AgentToolCalls, AgentModelCalls,
+    ListingEmbeddings, DisputeInvestigationReports,
+)
