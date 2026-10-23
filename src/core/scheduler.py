@@ -7,7 +7,7 @@ infrastructure (Celery/Redis) is needed for the MVP. Set SCHEDULER_ENABLED=false
 import asyncio
 import os
 import time
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 
 from sqlalchemy import select, text, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -17,6 +17,7 @@ from src.core.lookups import misc_id
 from src.core.platform_settings import get_setting
 from src.db_connections.database import AsyncSessionLocal, async_engine
 from src.helpers.logging_config import get_logger
+from src.core.clock import utcnow
 
 logger = get_logger(__name__)
 LOCK_KEY = 7_302_211  # arbitrary, unique to this app
@@ -36,7 +37,7 @@ async def job_confirmation_timeouts(db):
 
     pending_id = await misc_id(db, "order_status", PENDING_CONFIRMATION)
     ids = (await db.execute(select(Orders.id).where(
-        Orders.status == pending_id, Orders.confirmation_deadline < datetime.utcnow()
+        Orders.status == pending_id, Orders.confirmation_deadline < utcnow()
     ).limit(100))).scalars().all()
     for order_id in ids:
         order = await order_core.lock_order(db, order_id)
@@ -86,7 +87,7 @@ async def job_auto_complete(db):
     days = int(await get_setting(db, "auto_complete_days"))
     delivered_id = await misc_id(db, "order_status", DELIVERED)
     ids = (await db.execute(select(Orders.id).where(
-        Orders.status == delivered_id, Orders.delivered_at < datetime.utcnow() - timedelta(days=days)
+        Orders.status == delivered_id, Orders.delivered_at < utcnow() - timedelta(days=days)
     ).limit(100))).scalars().all()
     completed = reminded = 0
     for order_id in ids:
@@ -136,7 +137,7 @@ async def job_account_deletion(db):
 
     grace = int(await get_setting(db, "account_deletion_grace_days"))
     users = (await db.execute(select(Users).where(
-        Users.deletion_requested_at < datetime.utcnow() - timedelta(days=grace), Users.deleted_at.is_(None)
+        Users.deletion_requested_at < utcnow() - timedelta(days=grace), Users.deleted_at.is_(None)
     ).limit(50))).scalars().all()
     for user in users:
         user.first_name, user.last_name = "Deleted", "user"
@@ -145,8 +146,8 @@ async def job_account_deletion(db):
         user.password = None
         user.mfa_secret_encrypted = None
         user.status = await misc_id(db, "status", "inactive")
-        user.deleted_at = datetime.utcnow()
-        await db.execute(update(UserSessions).where(UserSessions.user_id == user.id).values(revoked_at=datetime.utcnow()))
+        user.deleted_at = utcnow()
+        await db.execute(update(UserSessions).where(UserSessions.user_id == user.id).values(revoked_at=utcnow()))
         for model in (DeviceTokens,):
             await db.execute(model.__table__.delete().where(model.user_id == user.id))
         farmer = (await db.execute(select(FarmerProfiles).where(FarmerProfiles.user_id == user.id))).scalar_one_or_none()
@@ -194,7 +195,7 @@ async def job_agent_retention(db):
     from src.data_models.platform_model import StoredFiles
 
     cfg = settings()
-    now = datetime.utcnow()
+    now = utcnow()
     events = await db.execute(AgentWorkflowEvents.__table__.delete().where(
         AgentWorkflowEvents.created_at < now - timedelta(days=cfg.event_retention_days)))
     calls = await db.execute(AgentModelCalls.__table__.delete().where(

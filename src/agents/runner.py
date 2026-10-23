@@ -20,7 +20,7 @@ import asyncio
 import os
 import socket
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from langgraph.types import Command
 from sqlalchemy import and_, or_, select, text, update
@@ -39,6 +39,7 @@ from src.data_models.agents_model import (
 from src.data_models.negotiation_model import Negotiations, Offers
 from src.db_connections.database import AsyncSessionLocal
 from src.helpers.logging_config import get_logger
+from src.core.clock import utcnow
 
 logger = get_logger("agents.runner")
 
@@ -71,13 +72,13 @@ class WorkflowRunner:
     @staticmethod
     def _event(db, run_id: str, event_type: str, node: str | None = None, data=None):
         db.add(AgentWorkflowEvents(run_id=run_id, event_type=event_type, node=node,
-                                   data=redact(data) if data is not None else None, created_at=datetime.utcnow()))
+                                   data=redact(data) if data is not None else None, created_at=utcnow()))
 
     async def create_run(self, *, user_id: int, role: str, message: str, workflow_type: str = "chat",
                          conversation_id: str | None = None, file_ids: list[str] | None = None,
                          dispute_id: int | None = None, carry_over: dict | None = None,
                          correlation_id: str | None = None) -> str:
-        run_id, now = str(uuid.uuid4()), datetime.utcnow()
+        run_id, now = str(uuid.uuid4()), utcnow()
         conversation_id = conversation_id or str(uuid.uuid4())
         correlation_id = correlation_id or uuid.uuid4().hex
         initial = {
@@ -110,12 +111,12 @@ class WorkflowRunner:
                 raise RunNotResumable(f"run is {run.status if run else 'missing'}")
             run.status, run.resume_payload, run.pending = QUEUED, {"resume": value}, None
             run.waiting_on_type = run.waiting_on_id = run.waiting_marker = None
-            run.next_attempt_at, run.updated_at = None, datetime.utcnow()
+            run.next_attempt_at, run.updated_at = None, utcnow()
             self._event(db, run_id, "resume", data={"type": value.get("type") or value.get("event") or value.get("decision")})
             await db.commit()
 
     async def _claim(self, run_id: str) -> AgentWorkflowRuns | None:
-        now = datetime.utcnow()
+        now = utcnow()
         async with self.session_factory() as db:
             result = await db.execute(
                 update(AgentWorkflowRuns)
@@ -192,7 +193,7 @@ class WorkflowRunner:
     async def _settle(self, run: AgentWorkflowRuns, snapshot):
         state = snapshot.values or {}
         interrupts = list(snapshot.interrupts or ())
-        now = datetime.utcnow()
+        now = utcnow()
         decided_early = None
         async with self.session_factory() as db:
             row = await db.get(AgentWorkflowRuns, run.id, with_for_update=True)
@@ -254,22 +255,22 @@ class WorkflowRunner:
             row = await db.get(AgentWorkflowRuns, run.id, with_for_update=True)
             row.lease_owner = row.lease_until = None
             row.error = error
-            row.updated_at = datetime.utcnow()
+            row.updated_at = utcnow()
             if row.attempts >= cfg.max_attempts:
-                row.status, row.completed_at = FAILED, datetime.utcnow()
+                row.status, row.completed_at = FAILED, utcnow()
             else:
                 row.status = QUEUED
                 row.resume_payload = retry_payload
-                row.next_attempt_at = datetime.utcnow() + timedelta(seconds=min(300, 5 * 2 ** row.attempts))
+                row.next_attempt_at = utcnow() + timedelta(seconds=min(300, 5 * 2 ** row.attempts))
             self._event(db, run.id, "error", data={**error, "attempts": row.attempts, "status": row.status})
             await db.commit()
 
     async def _finish(self, run_id: str, status: str, *, error: dict | None = None):
         async with self.session_factory() as db:
             row = await db.get(AgentWorkflowRuns, run_id, with_for_update=True)
-            row.status, row.error, row.completed_at = status, error, datetime.utcnow()
+            row.status, row.error, row.completed_at = status, error, utcnow()
             row.lease_owner = row.lease_until = None
-            row.updated_at = datetime.utcnow()
+            row.updated_at = utcnow()
             self._event(db, run_id, "status", data={"status": status, "error": error})
             await db.commit()
 
@@ -287,7 +288,7 @@ class WorkflowRunner:
             logger.exception(f"background drive of {run_id} failed: {e}")
 
     async def process_queue(self, limit: int | None = None) -> int:
-        now = datetime.utcnow()
+        now = utcnow()
         async with self.session_factory() as db:
             ids = (await db.execute(
                 select(AgentWorkflowRuns.id).where(or_(
@@ -330,7 +331,7 @@ class WorkflowRunner:
         return woken
 
     async def expire_approvals(self) -> int:
-        now = datetime.utcnow()
+        now = utcnow()
         async with self.session_factory() as db:
             rows = (await db.execute(select(AgentApprovalRequests).where(
                 AgentApprovalRequests.status == APPROVAL_PENDING, AgentApprovalRequests.expires_at < now,
@@ -353,11 +354,11 @@ class WorkflowRunner:
                 raise RunNotResumable("run not found")
             if row.status in TERMINAL_STATES or row.status == RUNNING:
                 raise RunNotResumable(f"run is {row.status}")
-            row.status, row.completed_at, row.updated_at = CANCELLED, datetime.utcnow(), datetime.utcnow()
+            row.status, row.completed_at, row.updated_at = CANCELLED, utcnow(), utcnow()
             row.pending = row.resume_payload = None
             await db.execute(update(AgentApprovalRequests).where(
                 AgentApprovalRequests.run_id == run_id, AgentApprovalRequests.status == APPROVAL_PENDING,
-            ).values(status=APPROVAL_SUPERSEDED, decided_at=datetime.utcnow()))
+            ).values(status=APPROVAL_SUPERSEDED, decided_at=utcnow()))
             self._event(db, run_id, "status", data={"status": CANCELLED})
             await db.commit()
 
@@ -371,7 +372,7 @@ class WorkflowRunner:
                 raise RunNotResumable("only failed runs can be retried")
             row.resume_payload = payload
             row.status, row.attempts, row.next_attempt_at, row.error = QUEUED, 0, None, None
-            row.completed_at, row.updated_at = None, datetime.utcnow()
+            row.completed_at, row.updated_at = None, utcnow()
             self._event(db, run_id, "status", data={"status": QUEUED, "retried": True})
             await db.commit()
 

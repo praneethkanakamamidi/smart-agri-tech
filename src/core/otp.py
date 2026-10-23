@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core import channels
 from src.core.crypto import hash_secret, verify_secret
 from src.data_models.platform_model import OtpCodes
+from src.core.clock import utcnow
 
 OTP_TTL_MINUTES = 10
 OTP_ATTEMPTS = 3
@@ -42,7 +43,7 @@ async def _save(db: AsyncSession, identifier: str, purpose: str, code_hash: str,
         await db.execute(delete(OtpCodes).where(OtpCodes.identifier == identifier, OtpCodes.purpose == purpose))
         db.add(OtpCodes(
             identifier=identifier, purpose=purpose, code_hash=code_hash, attempts_left=OTP_ATTEMPTS,
-            expires_at=expires_at, created_at=datetime.utcnow(),
+            expires_at=expires_at, created_at=utcnow(),
         ))
         await db.flush()
     else:
@@ -87,7 +88,7 @@ async def _remove(db: AsyncSession, identifier: str, purpose: str):
 async def issue(db: AsyncSession, identifier: str, purpose: str, channel: str, address: str, language_note: str = ""):
     """Create a code and send it over `channel` (sms | email). The caller commits for the postgres store."""
     code = generate_code()
-    await _save(db, identifier, purpose, hash_secret(code), datetime.utcnow() + timedelta(minutes=OTP_TTL_MINUTES))
+    await _save(db, identifier, purpose, hash_secret(code), utcnow() + timedelta(minutes=OTP_TTL_MINUTES))
     title = "Smart Agri Tech verification code"
     body = f"Your verification code is {code}. It expires in {OTP_TTL_MINUTES} minutes. Do not share it. {language_note}".strip()
     try:
@@ -104,7 +105,7 @@ async def verify(db: AsyncSession, identifier: str, purpose: str, code: str):
     record = await _load(db, identifier, purpose)
     if not record or ("otp_hash" not in record):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active code. Request a new one.")
-    if datetime.utcnow() > record["expires_at"]:
+    if utcnow() > record["expires_at"]:
         await _remove(db, identifier, purpose)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code expired. Request a new one.")
     if not verify_secret(code or "", record["otp_hash"]):

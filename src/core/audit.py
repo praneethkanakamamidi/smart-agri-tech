@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.data_models.platform_model import AuditLogs
+from src.core.clock import utcnow
 
 
 def _jsonable(value: Any) -> Any:
@@ -40,5 +41,5 @@ def audit(
         before=_jsonable(before) if before is not None else None,
         after=_jsonable(after) if after is not None else None,
         ip_address=ip_address,
-        created_at=datetime.utcnow(),
+        created_at=utcnow(),
     ))

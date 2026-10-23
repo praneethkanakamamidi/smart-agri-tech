@@ -1,4 +1,3 @@
-from datetime import datetime
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -12,6 +11,7 @@ from src.core.money import D
 from src.data_models.catalog_model import ProduceCategories, Units, QualityStandards
 from src.data_models.crops_model import Crops
 from src.helpers.serializers import model_to_dict
+from src.core.clock import utcnow
 
 MODELS = {"categories": ProduceCategories, "units": Units, "quality-standards": QualityStandards}
 
@@ -54,7 +54,7 @@ class CatalogService:
         if kind == "units" and payload.get("kg_factor") is not None:
             payload["kg_factor"] = D(payload["kg_factor"])
         if kind == "categories":
-            payload.setdefault("created_at", datetime.utcnow())
+            payload.setdefault("created_at", utcnow())
         row = model(**payload)
         db.add(row)
         try:
@@ -89,7 +89,7 @@ class CatalogService:
         before = {k: getattr(crop, k) for k in payload}
         for key, value in payload.items():
             setattr(crop, key, value)
-        crop.updated_by, crop.updated_at = admin_id, datetime.utcnow()
+        crop.updated_by, crop.updated_at = admin_id, utcnow()
         audit(db, "catalog.crop.updated", "crop", crop.id, actor_id=admin_id, actor_role="admin", before=before, after=payload)
         await db.commit()
         return {"id": crop.id, **payload}

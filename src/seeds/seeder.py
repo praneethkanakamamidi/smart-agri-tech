@@ -25,6 +25,7 @@ from src.data_models.miscellaneous_model import Miscellaneous_Data
 from src.data_models.platform_model import AuditLogs
 from src.data_models.roles_model import Roles
 from src.data_models.states_model import States
+from src.core.clock import utcnow
 
 DATA_DIR = Path(__file__).parent / "data"
 ADVISORY_LOCK_KEY = 7_302_212  # distinct from the scheduler's lock
@@ -117,7 +118,7 @@ class Seeder:
     def __init__(self, session: Session, data: dict | None = None, now: datetime | None = None):
         self.session = session
         self.data = data or load_seed_data()
-        self.now = now or datetime.utcnow()
+        self.now = now or utcnow()
 
     @staticmethod
     def _duplicates_error(table: str, keys: list) -> SeedError:

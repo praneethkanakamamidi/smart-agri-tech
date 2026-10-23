@@ -5,7 +5,6 @@ retrieve_evidence only returns records the caller may already see (participants 
 internal notes). Every record gets a stable reference id; investigation reports may only cite
 these ids. resolve_dispute runs with an admin's authority after that admin approves it.
 """
-from datetime import datetime
 
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
@@ -34,6 +33,7 @@ from src.security_utils.role_guard import ADMIN
 from src.services import order_core
 from src.services.disputes_service import DisputesService
 from src.services.files_service import FilesService, IMAGES
+from src.core.clock import utcnow
 
 TERM_FIELDS = ("quantity", "unit", "unit_price", "subtotal", "total_payable", "fulfillment_mode", "payment_terms",
                "expected_delivery_date", "delivery_instructions", "packaging_spec", "quality_spec", "offer_version",
@@ -164,7 +164,7 @@ async def create_dispute_report(db: AsyncSession, actor: Users, args: DisputeRep
             DisputeInvestigationReports.run_id == ctx.run_id))).scalar_one_or_none()
         if existing:
             return {"report_id": existing.id, "status": existing.status, "created": False}
-    now = datetime.utcnow()
+    now = utcnow()
     report = DisputeInvestigationReports(
         dispute_id=args.dispute_id, run_id=ctx.run_id, status="pending_review", report=args.report,
         evidence_index=args.evidence_index, generated_by=args.generated_by, requires_human_review=True, created_at=now,
@@ -191,6 +191,6 @@ async def resolve_dispute(db: AsyncSession, actor: Users, args: ResolveDisputeIn
     if args.report_id:
         report = await db.get(DisputeInvestigationReports, args.report_id)
         if report and report.dispute_id == args.dispute_id:
-            report.status, report.reviewed_by, report.reviewed_at = "reviewed", actor.id, datetime.utcnow()
+            report.status, report.reviewed_by, report.reviewed_at = "reviewed", actor.id, utcnow()
             report.review_decision = f"{args.status}:{args.resolution_type}"
     return {**result, "dispute_id": args.dispute_id}

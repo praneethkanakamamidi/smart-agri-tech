@@ -2,11 +2,11 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
 
 from src.data_models.crop_alerts_model import CropAlerts
 from src.data_models.crops_model import Crops
 from src.helpers.serializers import model_to_dict
+from src.core.clock import utcnow
 
 
 class CropAlertsService:
@@ -31,7 +31,7 @@ class CropAlertsService:
                 min_quantity_kg=payload.min_quantity_kg,
                 max_price_per_kg=payload.max_price_per_kg,
                 is_active=True,
-                created_at=datetime.utcnow(),
+                created_at=utcnow(),
             )
             db.add(alert)
             await db.commit()

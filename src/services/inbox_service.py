@@ -1,4 +1,3 @@
-from datetime import datetime
 
 from fastapi import HTTPException
 from sqlalchemy import select, func, case, update, and_, or_, delete
@@ -19,6 +18,7 @@ from src.helpers.serializers import model_to_dict
 from src.services.files_service import FilesService
 from src.services.negotiations_service import ensure_not_blocked
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 
 class InboxService:
@@ -67,7 +67,7 @@ class InboxService:
             listing_id=payload.listing_id, negotiation_id=payload.negotiation_id, dispute_id=payload.dispute_id,
             attachment_file_id=payload.attachment_file_id,
             message_type="image" if payload.attachment_file_id else "text",
-            body=body or "[attachment]", is_read=False, created_at=datetime.utcnow(),
+            body=body or "[attachment]", is_read=False, created_at=utcnow(),
         )
         db.add(message)
         await db.flush()
@@ -165,7 +165,7 @@ class InboxService:
             UserBlocks.blocker_id == user_id, UserBlocks.blocked_id == other_id
         ))).first()
         if not exists:
-            db.add(UserBlocks(blocker_id=user_id, blocked_id=other_id, created_at=datetime.utcnow()))
+            db.add(UserBlocks(blocker_id=user_id, blocked_id=other_id, created_at=utcnow()))
             await db.commit()
         return {"success": "User blocked. They can no longer message you or make offers to you."}
 
@@ -186,6 +186,6 @@ class InboxService:
         if duplicate:
             return {"success": "You already reported this. Our team will review it."}
         db.add(Reports(reporter_id=user_id, target_type=payload.target_type, target_id=payload.target_id,
-                       reason=payload.reason, details=payload.details, status="open", created_at=datetime.utcnow()))
+                       reason=payload.reason, details=payload.details, status="open", created_at=utcnow()))
         await db.commit()
         return {"success": "Report submitted. Our team will review it."}

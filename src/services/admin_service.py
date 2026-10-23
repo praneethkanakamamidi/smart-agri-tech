@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import select, func, or_, update
@@ -26,6 +26,7 @@ from src.services import order_core
 from src.services.notifications_service import notify_user
 from src.services.trust_service import trust_indicators
 from src.services.users_service import UsersService
+from src.core.clock import utcnow
 
 
 def _name(u):
@@ -102,7 +103,7 @@ class AdminService:
             user.verification_status = SUSPENDED
             await db.execute(update(UserSessions).where(
                 UserSessions.user_id == user_id, UserSessions.revoked_at.is_(None)
-            ).values(revoked_at=datetime.utcnow()))
+            ).values(revoked_at=utcnow()))
         elif new_status == "active":
             user.suspended_reason = None
             if user.verification_status == SUSPENDED:
@@ -114,7 +115,7 @@ class AdminService:
             user.suspended_reason = reason
             await db.execute(update(UserSessions).where(
                 UserSessions.user_id == user_id, UserSessions.revoked_at.is_(None)
-            ).values(revoked_at=datetime.utcnow()))
+            ).values(revoked_at=utcnow()))
         await notify_user(db, user_id, "account_status", {"status": new_status, "reason": reason}, category=SECURITY)
         audit(db, "admin.user_status_changed", "user", user_id, actor_id=admin_id, actor_role="admin",
               before={"status": before_status}, after={"status": new_status, "reason": reason})
@@ -140,7 +141,7 @@ class AdminService:
         request.status = decision
         request.reviewer_id = admin_id
         request.review_notes = notes
-        request.reviewed_at = datetime.utcnow()
+        request.reviewed_at = utcnow()
         user = (await db.execute(select(Users).where(Users.id == request.user_id))).scalar_one()
         if user.verification_status != SUSPENDED:
             verified_types = set((await db.execute(select(VerificationRequests.verification_type).where(
@@ -181,7 +182,7 @@ class AdminService:
         appeal.status = "accepted" if accept else "rejected"
         appeal.reviewed_by = admin_id
         appeal.review_notes = notes
-        appeal.reviewed_at = datetime.utcnow()
+        appeal.reviewed_at = utcnow()
         audit(db, "admin.appeal_decided", "account_appeal", appeal.id, actor_id=admin_id, actor_role="admin",
               after={"accepted": accept, "notes": notes})
         if accept:
@@ -228,11 +229,11 @@ class AdminService:
                 raise HTTPException(status_code=409, detail="Only removed listings can be restored.")
             listing.status = PAUSED
         listing.moderation_reason = reason
-        listing.updated_at = datetime.utcnow()
+        listing.updated_at = utcnow()
         if action == "remove":
             await db.execute(update(Reports).where(
                 Reports.target_type == "listing", Reports.target_id == listing_id, Reports.status == "open"
-            ).values(status="actioned", reviewed_by=admin_id, reviewed_at=datetime.utcnow(), review_notes=reason))
+            ).values(status="actioned", reviewed_by=admin_id, reviewed_at=utcnow(), review_notes=reason))
         crop = (await db.execute(select(Crops.crop_name).where(Crops.id == listing.crop))).scalar_one_or_none()
         await notify_user(db, listing.created_by, "listing_moderated",
                           {"crop": crop, "status": "removed" if action == "remove" else "restored (paused)", "reason": reason},
@@ -256,7 +257,7 @@ class AdminService:
         cert.status = decision
         cert.reviewed_by = admin_id
         cert.review_notes = notes
-        cert.reviewed_at = datetime.utcnow()
+        cert.reviewed_at = utcnow()
         if cert.cert_type == "organic":
             listing = (await db.execute(select(FarmerInventory).where(FarmerInventory.id == cert.listing_id))).scalar_one()
             listing.organic_verified = decision == "verified" and listing.organic_claim
@@ -282,7 +283,7 @@ class AdminService:
         report.status = decision
         report.reviewed_by = admin_id
         report.review_notes = notes
-        report.reviewed_at = datetime.utcnow()
+        report.reviewed_at = utcnow()
         audit(db, "admin.report_decided", "report", report.id, actor_id=admin_id, actor_role="admin",
               after={"decision": decision, "notes": notes})
         await db.commit()
@@ -294,7 +295,7 @@ class AdminService:
         """Authorised correction. The agreed terms are untouched; the adjustment is a separate, audited record."""
         order = await order_core.lock_order(db, order_id)
         adjustment = OrderAdjustments(order_id=order.id, amount=money(amount), reason=reason, created_by=admin_id,
-                                      created_at=datetime.utcnow())
+                                      created_at=utcnow())
         db.add(adjustment)
         for party_id in (order.farmer, order.vendor):
             await notify_user(db, party_id, "order_adjustment",
@@ -321,7 +322,7 @@ class AdminService:
                 for s, n, u in (await db.execute(stmt.order_by(Settlements.created_at))).all()]
 
     async def monitoring(self, db: AsyncSession, days: int = 30) -> dict:
-        since = datetime.utcnow() - timedelta(days=days)
+        since = utcnow() - timedelta(days=days)
         failed_id = await misc_id(db, "payment_status", "failed")
         failed_by_vendor = (await db.execute(
             select(Orders.vendor, func.count(Transactions.id))
@@ -337,7 +338,7 @@ class AdminService:
         )).all()
         pending_id = await misc_id(db, "order_status", PENDING_CONFIRMATION)
         stale_confirmations = (await db.execute(select(func.count(Orders.id)).where(
-            Orders.status == pending_id, Orders.confirmation_deadline < datetime.utcnow()
+            Orders.status == pending_id, Orders.confirmation_deadline < utcnow()
         ))).scalar()
         delivered_id = await misc_id(db, "order_status", DELIVERED)
         delivered_unpaid = []
@@ -379,7 +380,7 @@ class AdminService:
         return [model_to_dict(r) for r in rows]
 
     async def create_announcement(self, db: AsyncSession, admin_id: int, payload) -> dict:
-        row = Announcements(**payload.model_dump(exclude={"notify"}), created_by=admin_id, created_at=datetime.utcnow())
+        row = Announcements(**payload.model_dump(exclude={"notify"}), created_by=admin_id, created_at=utcnow())
         db.add(row)
         await db.flush()
         notified = 0
@@ -403,7 +404,7 @@ class AdminService:
                                         category=PROMOTIONAL if row.is_promotional else "transactional",
                                         dedupe_key=f"announcement:{row.id}")
             count += 1 if created else 0
-        row.notified_at = datetime.utcnow()
+        row.notified_at = utcnow()
         return count
 
     async def update_announcement(self, db: AsyncSession, admin_id: int, announcement_id: int, payload) -> dict:
@@ -441,7 +442,7 @@ class AdminService:
 
 
 async def active_announcements(db: AsyncSession, role: str | None, lang: str) -> list[dict]:
-    now = datetime.utcnow()
+    now = utcnow()
     stmt = select(Announcements).where(
         Announcements.is_active.is_(True),
         or_(Announcements.starts_at.is_(None), Announcements.starts_at <= now),

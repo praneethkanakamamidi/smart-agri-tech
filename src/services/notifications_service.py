@@ -11,6 +11,7 @@ from src.data_models.notifications_model import (
 )
 from src.data_models.platform_model import NotificationPreferences, NotificationDeliveries, DeviceTokens
 from src.data_models.users_model import Users
+from src.core.clock import utcnow
 
 MAX_DELIVERY_ATTEMPTS = 5
 # External channels used for each category (in-app is always used).
@@ -59,7 +60,7 @@ class NotificationsService:
                 ref_id=ref_id,
                 is_read=False,
                 category=TRANSACTIONAL,
-                created_at=datetime.utcnow(),
+                created_at=utcnow(),
             )
         )
         queue_event(db, user_id, {"event": "notification", "type": type, "title": title, "message": message,
@@ -99,7 +100,7 @@ class NotificationsService:
             return None
 
         title, message = render(template, normalize_language(user.preferred_language), **(params or {}))
-        now = datetime.utcnow()
+        now = utcnow()
         notification = Notifications(
             user_id=user_id, type=notification_type or template, title=title, message=message,
             ref_type=ref_type, ref_id=ref_id, is_read=False, category=category,
@@ -143,7 +144,7 @@ class NotificationsService:
     @staticmethod
     async def process_deliveries(db: AsyncSession, batch_size: int = 100) -> int:
         """Send due external deliveries with exponential backoff. Used by the scheduler."""
-        now = datetime.utcnow()
+        now = utcnow()
         rows = (await db.execute(
             select(NotificationDeliveries, Notifications, Users)
             .join(Notifications, NotificationDeliveries.notification_id == Notifications.id)
@@ -172,14 +173,14 @@ class NotificationsService:
                         await channels.send("push", token, notification.title, notification.message or "",
                                             {"ref_type": notification.ref_type, "ref_id": notification.ref_id})
                 delivery.status = "sent"
-                delivery.sent_at = datetime.utcnow()
+                delivery.sent_at = utcnow()
                 delivery.last_error = None
             except Exception as e:  # provider failures are recorded and retried
                 delivery.last_error = str(e)[:255]
                 if delivery.attempts >= MAX_DELIVERY_ATTEMPTS:
                     delivery.status = "failed"
                 else:
-                    delivery.next_attempt_at = datetime.utcnow() + timedelta(minutes=2 ** delivery.attempts)
+                    delivery.next_attempt_at = utcnow() + timedelta(minutes=2 ** delivery.attempts)
         await db.commit()
         return len(rows)
 
@@ -296,7 +297,7 @@ class NotificationsService:
                 setattr(prefs, field, value)
         if payload.clear_quiet_hours:
             prefs.quiet_hours_start = prefs.quiet_hours_end = None
-        prefs.updated_at = datetime.utcnow()
+        prefs.updated_at = utcnow()
         if payload.preferred_language:
             user = (await db.execute(select(Users).where(Users.id == user_id))).scalar_one()
             user.preferred_language = normalize_language(payload.preferred_language)
@@ -305,7 +306,7 @@ class NotificationsService:
 
     async def register_device(self, user_id: int, token: str, platform: str, db: AsyncSession) -> dict:
         existing = (await db.execute(select(DeviceTokens).where(DeviceTokens.token == token))).scalar_one_or_none()
-        now = datetime.utcnow()
+        now = utcnow()
         if existing:
             existing.user_id = user_id
             existing.platform = platform

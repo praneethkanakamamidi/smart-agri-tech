@@ -19,7 +19,6 @@ even before its row is purged.
 import argparse
 import asyncio
 import hashlib
-from datetime import datetime
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +32,7 @@ from src.data_models.states_model import States
 from src.data_models.users_model import Users
 from src.db_connections.database import AsyncSessionLocal
 from src.helpers.logging_config import get_logger
+from src.core.clock import utcnow
 
 logger = get_logger(__name__)
 
@@ -91,7 +91,7 @@ async def index_listings(db: AsyncSession, listing_ids: list[int], force: bool =
         "WHERE model_version = :mv AND listing_id = ANY(:ids)"
     ), {"mv": model_version, "ids": list(texts)})).all())
     todo = [(lid, t) for lid, t in texts.items() if force or existing.get(lid) != content_hash(t)]
-    now = datetime.utcnow()
+    now = utcnow()
     unchanged = [lid for lid in texts if lid in existing and lid not in {t[0] for t in todo}]
     if unchanged:
         # e.g. a price or stock edit: the embedded text is the same, so only mark the row fresh.

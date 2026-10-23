@@ -1,4 +1,3 @@
-from datetime import datetime
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -10,6 +9,7 @@ from src.data_models.platform_model import SupportTickets, SupportTicketMessages
 from src.helpers.serializers import model_to_dict
 from src.services.files_service import FilesService
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 
 class SupportService:
@@ -19,7 +19,7 @@ class SupportService:
             if not order or user.id not in (order.farmer, order.vendor):
                 raise HTTPException(status_code=404, detail="Order not found.")
         files = await FilesService.require_owned(db, payload.file_ids, user.id, {"support_attachment"})
-        now = datetime.utcnow()
+        now = utcnow()
         ticket = SupportTickets(user_id=user.id, subject=payload.subject, category=payload.category, status="open",
                                 priority="normal", order_id=payload.order_id, created_at=now, updated_at=now)
         db.add(ticket)
@@ -58,8 +58,8 @@ class SupportService:
             raise HTTPException(status_code=403, detail="Only staff can add internal notes.")
         files = await FilesService.require_owned(db, payload.file_ids, user.id, {"support_attachment"})
         db.add(SupportTicketMessages(ticket_id=ticket.id, author_id=user.id, body=payload.message, file_ids=files,
-                                     is_internal=payload.internal, created_at=datetime.utcnow()))
-        ticket.updated_at = datetime.utcnow()
+                                     is_internal=payload.internal, created_at=utcnow()))
+        ticket.updated_at = utcnow()
         if is_admin and not payload.internal:
             if ticket.status == "open":
                 ticket.status = "in_progress"
@@ -85,9 +85,9 @@ class SupportService:
         changes = payload.model_dump(exclude_unset=True)
         for key, value in changes.items():
             setattr(ticket, key, value)
-        ticket.updated_at = datetime.utcnow()
+        ticket.updated_at = utcnow()
         if changes.get("status") in ("resolved", "closed"):
-            ticket.closed_at = datetime.utcnow()
+            ticket.closed_at = utcnow()
             await notify_user(db, ticket.user_id, "ticket_update", {"ticket_id": ticket.id, "status": changes["status"]},
                               ref_type="ticket", ref_id=ticket.id)
         audit(db, "admin.ticket_updated", "support_ticket", ticket.id, actor_id=admin.id, actor_role="admin", after=changes)

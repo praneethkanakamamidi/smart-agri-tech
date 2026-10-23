@@ -2,7 +2,6 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, func, extract
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
 
 from src.data_models.farm_expenses_model import FarmExpenses
 from src.data_models.orders_model import Orders
@@ -11,6 +10,7 @@ from src.data_models.farmer_inventory_model import FarmerInventory
 from src.data_models.crops_model import Crops
 from src.data_models.miscellaneous_model import Miscellaneous_Data
 from src.helpers.serializers import model_to_dict
+from src.core.clock import utcnow
 
 
 class ExpensesService:
@@ -31,7 +31,7 @@ class ExpensesService:
                 amount=payload.amount,
                 expense_date=payload.expense_date,
                 note=payload.note,
-                created_at=datetime.utcnow(),
+                created_at=utcnow(),
             )
             db.add(expense)
             await db.commit()
@@ -51,7 +51,7 @@ class ExpensesService:
             expense.amount = payload.amount
             expense.expense_date = payload.expense_date
             expense.note = payload.note
-            expense.updated_at = datetime.utcnow()
+            expense.updated_at = utcnow()
             await db.commit()
             return {"success": "Expense updated."}
         except HTTPException:

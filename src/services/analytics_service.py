@@ -24,12 +24,13 @@ from src.data_models.roles_model import Roles
 from src.data_models.transactions_model import Transactions, Refunds, Settlements
 from src.data_models.users_model import Users, VERIFIED
 from src.services.trust_service import trust_indicators
+from src.core.clock import utcnow
 
 PERIODS = {"day": "day", "week": "week", "month": "month"}
 
 
 def _period_range(date_from: date | None, date_to: date | None, default_days: int = 90):
-    end = datetime.combine(date_to, datetime.max.time()) if date_to else datetime.utcnow()
+    end = datetime.combine(date_to, datetime.max.time()) if date_to else utcnow()
     start = datetime.combine(date_from, datetime.min.time()) if date_from else end - timedelta(days=default_days)
     if start > end:
         raise HTTPException(status_code=422, detail="date_from must be before date_to.")
@@ -296,7 +297,7 @@ class AnalyticsService:
 
     async def success_metrics(self, db: AsyncSession, weeks: int = 4) -> dict:
         """The marketplace outcome metrics from the product spec (section 27)."""
-        end = datetime.utcnow()
+        end = utcnow()
         start = end - timedelta(weeks=weeks)
         prev_start = start - timedelta(weeks=weeks)
         cur_farmers, cur_vendors = await self._active_sets(db, start, end)

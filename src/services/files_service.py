@@ -19,6 +19,7 @@ from src.data_models.logistics_model import Shipments
 from src.data_models.orders_model import Orders
 from src.data_models.listing_extras_model import ListingImages, ListingCertifications
 from src.data_models.users_model import Users
+from src.core.clock import utcnow
 
 IMAGES = {"image/jpeg", "image/png", "image/webp"}
 IMAGES_AND_PDF = IMAGES | {"application/pdf"}
@@ -60,7 +61,7 @@ class FilesService:
                 detail="Unsupported file type. Allowed: " + ", ".join(sorted(PURPOSES[purpose])),
             )
         file_id = str(uuid.uuid4())
-        now = datetime.utcnow()
+        now = utcnow()
         key = f"{purpose}/{now:%Y/%m}/{file_id}.{EXTENSIONS[content_type]}"
         storage.save(key, content)
         db.add(StoredFiles(
@@ -201,7 +202,7 @@ class FilesService:
         in_use = (await db.execute(select(ListingImages.id).where(ListingImages.file_id == file_id))).first()
         if f.purpose not in ("listing_image",) or in_use:
             raise HTTPException(status_code=409, detail="This file is attached to a record and is kept as evidence.")
-        f.deleted_at = datetime.utcnow()
+        f.deleted_at = utcnow()
         storage.delete(f.storage_path)
         await db.commit()
         return {"success": "File deleted."}

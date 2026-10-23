@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import select, or_, func
@@ -22,6 +22,7 @@ from src.helpers.serializers import model_to_dict
 from src.services import order_core
 from src.services.files_service import FilesService
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 DISPUTABLE = (CONFIRMED, PREPARING, READY_FOR_PICKUP, IN_TRANSIT, DELIVERED, COMPLETED, DELIVERY_FAILED,
               CANCELLED, REFUND_PENDING, REFUNDED)
@@ -56,7 +57,7 @@ class DisputesService:
 
     def _log(self, db, dispute_id: int, author_id: int | None, body: str, kind: str, file_ids=None):
         db.add(DisputeMessages(dispute_id=dispute_id, author_id=author_id, body=body[:2000], file_ids=file_ids or [],
-                               kind=kind, created_at=datetime.utcnow()))
+                               kind=kind, created_at=utcnow()))
 
     async def raise_dispute(self, payload, user_id: int, db: AsyncSession):
         order = await order_core.lock_order(db, payload.order_id)
@@ -66,7 +67,7 @@ class DisputesService:
         if current not in DISPUTABLE:
             raise HTTPException(status_code=409, detail=f"Disputes can't be raised on a {current} order.")
         window = int(await get_setting(db, "dispute_window_days"))
-        if order.delivered_at and order.delivered_at < datetime.utcnow() - timedelta(days=window):
+        if order.delivered_at and order.delivered_at < utcnow() - timedelta(days=window):
             raise HTTPException(status_code=409, detail=f"Disputes must be raised within {window} days of delivery.")
         if (await db.execute(select(Disputes.id).where(
             Disputes.order_id == order.id, Disputes.status.in_(ACTIVE_DISPUTE_STATES)
@@ -75,7 +76,7 @@ class DisputesService:
         evidence = await FilesService.require_owned(db, payload.evidence_file_ids, user_id, {"dispute_evidence"})
 
         against = order.vendor if user_id == order.farmer else order.farmer
-        now = datetime.utcnow()
+        now = utcnow()
         dispute = Disputes(order_id=order.id, raised_by=user_id, against=against, reason=payload.reason,
                            description=payload.description, status=OPEN, escalated=False,
                            created_at=now, updated_at=now)
@@ -103,7 +104,7 @@ class DisputesService:
         evidence = await FilesService.require_owned(db, payload.evidence_file_ids, user_id, {"dispute_evidence"})
         kind = "internal_note" if payload.internal else ("evidence" if evidence else "message")
         self._log(db, dispute.id, user_id, payload.body, kind, evidence)
-        dispute.updated_at = datetime.utcnow()
+        dispute.updated_at = utcnow()
         if not payload.internal:
             if dispute.status == AWAITING_EVIDENCE and not is_admin:
                 dispute.status = UNDER_REVIEW
@@ -135,7 +136,7 @@ class DisputesService:
         if dispute.raised_by != user_id or dispute.status not in ACTIVE_DISPUTE_STATES:
             raise HTTPException(status_code=409, detail="Only the person who raised an open dispute can withdraw it.")
         dispute.status = WITHDRAWN
-        dispute.resolved_at = dispute.updated_at = datetime.utcnow()
+        dispute.resolved_at = dispute.updated_at = utcnow()
         await self._restore_order(db, dispute, f"dispute #{dispute.id} withdrawn")
         self._log(db, dispute.id, user_id, "Dispute withdrawn.", "status_change")
         await notify_user(db, dispute.against, "dispute_update", {"dispute_id": dispute.id, "status": WITHDRAWN},
@@ -150,10 +151,10 @@ class DisputesService:
             raise HTTPException(status_code=409, detail="This dispute is closed.")
         if dispute.escalated:
             return {"success": "This dispute is already escalated."}
-        if dispute.created_at > datetime.utcnow() - timedelta(days=2):
+        if dispute.created_at > utcnow() - timedelta(days=2):
             raise HTTPException(status_code=409, detail="You can escalate if the dispute is still unresolved after 2 days.")
         dispute.escalated = True
-        dispute.escalated_at = dispute.updated_at = datetime.utcnow()
+        dispute.escalated_at = dispute.updated_at = utcnow()
         self._log(db, dispute.id, user_id, "Dispute escalated for priority review.", "status_change")
         order = (await db.execute(select(Orders).where(Orders.id == dispute.order_id))).scalar_one()
         for admin_id in await self._admin_ids(db):
@@ -190,7 +191,7 @@ class DisputesService:
         dispute.assigned_to = assignee_id
         if dispute.status == OPEN:
             dispute.status = UNDER_REVIEW
-        dispute.updated_at = datetime.utcnow()
+        dispute.updated_at = utcnow()
         self._log(db, dispute.id, admin_id, f"Assigned to admin #{assignee_id}.", "status_change")
         audit(db, "dispute.assigned", "dispute", dispute.id, actor_id=admin_id, actor_role="admin", after={"assigned_to": assignee_id})
         await db.commit()
@@ -202,7 +203,7 @@ class DisputesService:
             raise HTTPException(status_code=409, detail="This dispute is closed.")
         before = dispute.status
         dispute.status = payload.status
-        dispute.updated_at = datetime.utcnow()
+        dispute.updated_at = utcnow()
         self._log(db, dispute.id, admin_id, payload.note or f"Status changed to {payload.status}.", "status_change")
         for party_id in (dispute.raised_by, dispute.against):
             await notify_user(db, party_id, "dispute_update", {"dispute_id": dispute.id, "status": payload.status},
@@ -254,7 +255,7 @@ class DisputesService:
         dispute.resolution_type = payload.resolution_type
         dispute.refund_amount = str(refund.amount) if refund else None
         dispute.resolved_by = admin_id
-        dispute.resolved_at = dispute.updated_at = datetime.utcnow()
+        dispute.resolved_at = dispute.updated_at = utcnow()
         self._log(db, dispute.id, admin_id, f"{payload.status.title()}: {payload.resolution}", "status_change")
         for party in (dispute.raised_by, dispute.against):
             await notify_user(db, party, "dispute_resolved",

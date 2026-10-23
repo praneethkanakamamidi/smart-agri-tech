@@ -1,5 +1,4 @@
 """Order receipts, payment receipts and invoices, numbered from a database sequence."""
-from datetime import datetime
 from html import escape
 
 from fastapi import HTTPException
@@ -12,6 +11,7 @@ from src.data_models.orders_model import Orders, Invoices
 from src.data_models.transactions_model import Transactions
 from src.data_models.users_model import Users
 from src.data_models.profiles_model import FarmerProfiles, VendorProfiles
+from src.core.clock import utcnow
 
 PREFIX = {"order_receipt": "ORC", "payment_receipt": "PRC", "invoice": "INV"}
 TITLES = {"order_receipt": "Order Receipt", "payment_receipt": "Payment Receipt", "invoice": "Invoice"}
@@ -42,7 +42,7 @@ async def issue(db: AsyncSession, order: Orders, invoice_type: str, transaction:
     if existing:
         return existing
     seq = (await db.execute(text("SELECT nextval('invoice_number_seq')"))).scalar()
-    now = datetime.utcnow()
+    now = utcnow()
     number = f"{PREFIX[invoice_type]}-{now:%Y}-{seq:07d}"
     data = {
         "title": TITLES[invoice_type],

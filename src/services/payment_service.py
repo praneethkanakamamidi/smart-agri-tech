@@ -8,7 +8,7 @@ import hashlib
 import hmac
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -25,6 +25,7 @@ from src.data_models.transactions_model import Transactions, Refunds, Settlement
 from src.helpers.serializers import model_to_dict
 from src.services import order_core, invoices_service
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 PENDING_REUSE_MINUTES = 30
 
@@ -47,7 +48,7 @@ async def _mark_paid(db: AsyncSession, txn: Transactions, payment_id: str | None
     txn.razorpay_payment_id = payment_id or txn.razorpay_payment_id
     txn.razorpay_signature = signature or txn.razorpay_signature
     txn.verified_via = via
-    txn.updated_at = datetime.utcnow()
+    txn.updated_at = utcnow()
     order = (await db.execute(select(Orders).where(Orders.id == txn.order_id))).scalar_one()
     await invoices_service.issue(db, order, "payment_receipt", txn)
     audit(db, "payment.succeeded", "transaction", txn.id, after={"amount": txn.amount_paid, "via": via})
@@ -63,7 +64,7 @@ async def _mark_failed(db: AsyncSession, txn: Transactions, reason: str | None):
         return
     txn.status = await misc_id(db, "payment_status", "failed")
     txn.failure_reason = (reason or "payment failed")[:255]
-    txn.updated_at = datetime.utcnow()
+    txn.updated_at = utcnow()
     order = (await db.execute(select(Orders).where(Orders.id == txn.order_id))).scalar_one()
     await notify_user(db, order.vendor, "payment_failed", {"amount": txn.amount_paid, "order_number": order.order_number},
                       ref_type="order", ref_id=order.id)
@@ -124,7 +125,7 @@ class PaymentsService:
         recent = (await db.execute(select(Transactions).where(
             Transactions.order_id == order.id, Transactions.status == pending_id,
             Transactions.amount_paid == amount, Transactions.purpose == purpose,
-            Transactions.created_at >= datetime.utcnow() - timedelta(minutes=PENDING_REUSE_MINUTES),
+            Transactions.created_at >= utcnow() - timedelta(minutes=PENDING_REUSE_MINUTES),
         ))).scalars().first()
         if recent:
             return {"success": True, "message": "Existing payment order reused", "razorpay_order_id": recent.razorpay_order_id,
@@ -142,8 +143,8 @@ class PaymentsService:
             raise HTTPException(status_code=502, detail=f"Payment gateway error: {e}")
         txn = Transactions(
             order_id=order.id, razorpay_order_id=razorpay_order["id"], amount_paid=amount, currency=payload.currency,
-            status=pending_id, payment_method="gateway", purpose=purpose, created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            status=pending_id, payment_method="gateway", purpose=purpose, created_at=utcnow(),
+            updated_at=utcnow(),
         )
         db.add(txn)
         audit(db, "payment.initiated", "order", order.id, actor_id=vendor_id, actor_role="vendor",
@@ -185,7 +186,7 @@ class PaymentsService:
         if (await db.execute(select(WebhookEvents.id).where(WebhookEvents.event_id == event_id))).first():
             return {"status": "duplicate"}
         record = WebhookEvents(provider="razorpay", event_id=event_id, event_type=event.get("event"),
-                               payload=event, received_at=datetime.utcnow(), status="ignored")
+                               payload=event, received_at=utcnow(), status="ignored")
         db.add(record)
         event_type = event.get("event", "")
         payload = event.get("payload", {})
@@ -223,7 +224,7 @@ class PaymentsService:
         pending_id = await misc_id(db, "payment_status", "pending")
         txns = (await db.execute(select(Transactions).where(
             Transactions.status == pending_id, Transactions.payment_method == "gateway",
-            Transactions.created_at <= datetime.utcnow() - timedelta(minutes=older_than_minutes),
+            Transactions.created_at <= utcnow() - timedelta(minutes=older_than_minutes),
         ).limit(200))).scalars().all()
         updated = {"paid": 0, "failed": 0, "unchanged": 0}
         for txn in txns:
@@ -256,7 +257,7 @@ class PaymentsService:
         amount = money(payload.amount)
         if amount > summary["outstanding"]:
             raise HTTPException(status_code=422, detail=f"Only ₹{summary['outstanding']} is outstanding.")
-        now = datetime.utcnow()
+        now = utcnow()
         txn = Transactions(
             order_id=order.id, amount_paid=amount, currency="INR", payment_method=payload.method,
             purpose="balance" if summary["paid"] > 0 else "full", reference=payload.reference,
@@ -278,7 +279,7 @@ class PaymentsService:
         if refund.status != "REFUND_PENDING":
             return
         refund.status = "REFUNDED" if succeeded else "FAILED"
-        refund.processed_at = datetime.utcnow()
+        refund.processed_at = utcnow()
         refund.reference = reference or refund.reference
         order = await order_core.lock_order(db, refund.order_id)
         if succeeded:
@@ -355,7 +356,7 @@ class PaymentsService:
             raise HTTPException(status_code=404, detail="No pending settlement with that id.")
         settlement.status = "paid"
         settlement.payout_reference = reference
-        settlement.paid_at = datetime.utcnow()
+        settlement.paid_at = utcnow()
         order = (await db.execute(select(Orders).where(Orders.id == settlement.order_id))).scalar_one()
         await notify_user(db, settlement.farmer, "settlement_paid",
                           {"amount": settlement.net_amount, "order_number": order.order_number},

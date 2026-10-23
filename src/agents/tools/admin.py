@@ -1,6 +1,6 @@
 """Admin oversight (read-only) and admin-initiated notifications."""
 import hashlib
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from pydantic import BaseModel, Field
 from sqlalchemy import case, func, select
@@ -18,6 +18,7 @@ from src.data_models.platform_model import Reports
 from src.data_models.users_model import Users
 from src.services.admin_service import AdminService
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 
 class OverviewInput(BaseModel):
@@ -27,7 +28,7 @@ class OverviewInput(BaseModel):
 @tool("admin_overview", OverviewInput,
       "Flagged listings, suspicious activity, disputes, failed or escalated workflows and model usage.")
 async def admin_overview(db: AsyncSession, actor: Users, args: OverviewInput, ctx: RunContext) -> dict:
-    since = datetime.utcnow() - timedelta(days=args.days)
+    since = utcnow() - timedelta(days=args.days)
     flagged = (await db.execute(
         select(Reports.target_id, func.count(Reports.id), func.max(Reports.created_at))
         .where(Reports.target_type == "listing", Reports.status == "open").group_by(Reports.target_id)
