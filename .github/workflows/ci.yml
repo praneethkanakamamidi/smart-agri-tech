@@ -19,7 +19,7 @@ jobs:
       REFRESH_TOKEN: ci-refresh-secret
       ALGORITHM: HS256
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Migration 006 needs PostGIS and pgvector, so the database is our own image rather than
       # a stock service container.
       - name: Start PostgreSQL (PostGIS + pgvector)
@@ -33,7 +33,7 @@ jobs:
             sleep 2
           done
           docker logs postgres; exit 1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build images
         run: |
           docker build --build-arg INSTALL_ML=false -t smart-agri-tech:ci .
