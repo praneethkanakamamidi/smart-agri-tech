@@ -43,6 +43,7 @@ class AgentSettings:
     enabled: bool = True
 
     # ---- LLM registry and routing
+    llm_provider: str = "none"  # anthropic | openai | local | none (comma-separated to combine)
     models_file: str | None = None
     models_json: list | None = None
     task_routes: dict = field(default_factory=dict)  # task -> [model ids in preference order]
@@ -120,6 +121,7 @@ class AgentSettings:
 def settings() -> AgentSettings:
     return AgentSettings(
         enabled=_bool("AGENTS_ENABLED", True),
+        llm_provider=(os.getenv("LLM_PROVIDER") or "none").strip().lower(),
         models_file=os.getenv("LLM_MODELS_FILE") or None,
         models_json=_json("LLM_MODELS_JSON", None),
         task_routes=_json("LLM_TASK_ROUTES_JSON", {}),

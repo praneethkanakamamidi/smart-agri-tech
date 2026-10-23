@@ -15,7 +15,9 @@ x-backend-env: &backend-env
 
 services:
   smart-agri-tech-postgres:
-    image: postgres:16-alpine
+    build:
+      context: docker/postgres  # PostgreSQL 16 + PostGIS + pgvector (needed by migration 006)
+    image: smart-agri-tech-postgres:16
     container_name: smart-agri-tech-postgres
     restart: unless-stopped
     env_file:
@@ -47,7 +49,8 @@ services:
     networks:
       - smart-agri-tech-net
 
-  # One-shot deploy step: schema migrations, then idempotent reference-data seeding.
+  # One-shot deploy step: schema migrations (+ LangGraph checkpoint tables), then idempotent
+  # reference-data seeding.
   smart-agri-tech-migrate:
     build:
       context: .

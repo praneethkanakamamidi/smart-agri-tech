@@ -14,10 +14,9 @@ Datasets always run in this dependency order, in a single transaction.
 
 ## Where the data comes from
 
-- **`locations.json`**: the 28 states and 491 districts from `docs/tables_scripts.txt`, in the
-  same order. The script's duplicated Nagaland block was dropped. Assam, Bihar and Mizoram have no
-  districts in the script, and several lists stop early (for example Uttar Pradesh ends at Lucknow),
-  so add the missing districts here, not in SQL.
+- **`locations.json`**: 28 states and 491 districts. Assam, Bihar and Mizoram have no districts
+  yet, and several lists are partial (for example Uttar Pradesh ends at Lucknow), so add the
+  missing districts here, not in SQL.
 - **`lookups.json`**: only values the application code reads:
 
 | Category | Values | Used by |
@@ -27,8 +26,6 @@ Datasets always run in this dependency order, in a single transaction.
 | `order_status` | the 12 lifecycle states | `orders_model.ORDER_STATUSES`, `order_core` |
 | `payment_status` | initiated, pending, paid, failed, refund_pending, refunded | `transactions_model`, payments |
 | roles | farmer, vendor, admin | registration, `role_guard` |
-
-`docs/tables_scripts.txt` is kept for reference. Seed from the JSON files, not from that script.
 
 ## How it behaves
 

@@ -12,18 +12,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s --health-timeout 5s --health-retries 20
+    timeout-minutes: 25
     env:
       TEST_DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/postgres
       ACCESS_TOKEN: ci-access-secret
@@ -31,6 +20,19 @@ jobs:
       ALGORITHM: HS256
     steps:
       - uses: actions/checkout@v4
+      # Migration 006 needs PostGIS and pgvector, so the database is our own image rather than
+      # a stock service container.
+      - name: Start PostgreSQL (PostGIS + pgvector)
+        run: |
+          docker build -t smart-agri-tech-postgres:ci docker/postgres
+          docker run -d --name postgres -p 5432:5432 \
+            -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres \
+            smart-agri-tech-postgres:ci
+          for i in $(seq 1 30); do
+            docker exec postgres pg_isready -U postgres && exit 0
+            sleep 2
+          done
+          docker logs postgres; exit 1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -41,6 +43,8 @@ jobs:
         run: ruff check src alembic tests main.py
       - name: Tests (unit, seeding, end-to-end API on PostgreSQL)
         run: pytest -q
+        env:
+          EMBEDDING_PROVIDER: hashing   # no model download in CI
       - name: Migrations match models (no autogenerate drift)
         env:
           POSTGRES_USER: postgres
@@ -57,5 +61,7 @@ jobs:
     needs: test
     steps:
       - uses: actions/checkout@v4
-      - name: Build image
-        run: docker build -t smart-agri-tech:ci .
+      - name: Build images
+        run: |
+          docker build --build-arg INSTALL_ML=false -t smart-agri-tech:ci .
+          docker build -t smart-agri-tech-postgres:ci docker/postgres

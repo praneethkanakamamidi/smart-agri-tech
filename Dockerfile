@@ -3,11 +3,15 @@
 # ---- build stage: compile wheels once --------------------------------------------------------
 FROM python:3.13-slim AS build
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
+# INSTALL_ML=false skips the local embedding/reranking models (~200 MB of torch); then set
+# EMBEDDING_PROVIDER=hashing or point EMBEDDING_PROVIDER at a server-side model.
+ARG INSTALL_ML=true
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt .
-RUN pip wheel --wheel-dir /wheels -r requirements.txt
+COPY requirements.txt requirements-ml.txt ./
+RUN pip wheel --wheel-dir /wheels -r requirements.txt \
+    && if [ "$INSTALL_ML" = "true" ]; then pip wheel --wheel-dir /wheels -r requirements-ml.txt; fi
 
 # ---- runtime stage: no compilers, non-root ---------------------------------------------------
 FROM python:3.13-slim AS runtime

@@ -1,8 +1,9 @@
 """
 Model registry. Models, their providers and their capabilities are configuration, never code:
 
-    LLM_MODELS_FILE=config/llm_models.json      (a JSON list, see config/llm_models.example.json)
-    LLM_MODELS_JSON='[{"id": "...", ...}]'       (inline; takes precedence)
+    LLM_PROVIDER=anthropic | openai | local | none   (presets, see src/agents/llm/presets.py)
+    LLM_MODELS_FILE=config/llm_models.json      (a full registry; see config/llm_models.example.json)
+    LLM_MODELS_JSON='[{"id": "...", ...}]'       (inline full registry; takes precedence over all)
 
 Capabilities are declared by the operator for each model. The router trusts the declaration
 for routing and the provider adapter still fails loudly if a model rejects an input.
@@ -117,13 +118,21 @@ class ModelRegistry:
     def from_settings(cls) -> "ModelRegistry":
         cfg = settings()
         raw = cfg.models_json
+        source = "LLM_MODELS_JSON"
         if raw is None and cfg.models_file:
             with open(cfg.models_file, encoding="utf-8") as fh:
                 raw = json.load(fh)
+            source = cfg.models_file
+        if raw is None:
+            from src.agents.llm.presets import models_from_env
+
+            raw = models_from_env()
+            source = f"LLM_PROVIDER={cfg.llm_provider}"
         configs = [ModelConfig.model_validate(item) for item in (raw or [])]
         registry = cls(configs)
         logger.info("LLM registry loaded", extra={
-            "models": [m.id for m in registry.all()], "available": [m.id for m in registry.available()],
+            "source": source, "models": [m.id for m in registry.all()],
+            "available": [m.id for m in registry.available()],
         })
         return registry
 
