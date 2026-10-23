@@ -6,7 +6,11 @@ Database layer with clear separation between synchronous and asynchronous access
 
 Pool sizing and timeouts are configurable through DB_* environment variables.
 """
+import json
 import os
+import uuid
+from datetime import date, datetime, time
+from decimal import Decimal
 from typing import AsyncGenerator, Generator
 
 from dotenv import load_dotenv
@@ -38,6 +42,22 @@ SQLALCHEMY_DATABASE_URL_ASYNC = (
     f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
 
+
+def _json_default(value):
+    """Types that reach JSON columns from service results: money stays exact (as a string, the way
+    the API returns it), dates become ISO-8601."""
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, (datetime, date, time)):
+        return value.isoformat()
+    if isinstance(value, uuid.UUID):
+        return str(value)
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
+def json_serializer(value) -> str:
+    return json.dumps(value, default=_json_default)
+
 # ---------------------------------------------------------------------------
 # Synchronous engine and session (migrations, scripts, sync components)
 # ---------------------------------------------------------------------------
@@ -50,6 +70,7 @@ sync_engine = create_engine(
     pool_pre_ping=True,
     echo=False,
     future=True,
+    json_serializer=json_serializer,
 )
 
 SyncSessionLocal = sessionmaker(
@@ -75,6 +96,7 @@ async_engine = create_async_engine(
     pool_pre_ping=True,
     echo=False,
     connect_args=_async_connect_args,
+    json_serializer=json_serializer,
 )
 
 AsyncSessionLocal = async_sessionmaker(
