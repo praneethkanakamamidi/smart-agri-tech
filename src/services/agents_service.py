@@ -179,7 +179,10 @@ class AgentsService:
         run = await self._run(db, run_id, user, allow_admin=False)
         if run.status != AWAITING_INPUT:
             raise HTTPException(status_code=409, detail=f"This workflow is {run.status}, not waiting for an answer.")
-        await db.rollback()  # release the read before the runner locks the row
+        # End the read before the runner locks the row. Nothing was written, so commit rather than roll
+        # back: a rollback expires every loaded object (expire_on_commit=False doesn't cover it), and the
+        # later reads of `user` would then lazy-load outside the async context (MissingGreenlet).
+        await db.commit()
         try:
             await runner.queue_resume(run_id, {"type": "input", "text": text}, (AWAITING_INPUT,))
         except RunNotResumable as e:
@@ -199,7 +202,7 @@ class AgentsService:
     async def get_run(self, user: Users, run_id: str, db: AsyncSession) -> dict:
         run = await self._run(db, run_id, user)
         if run.status == "waiting_external" and runtime.ready:
-            await db.rollback()
+            await db.commit()  # end the read without expiring `user` (see provide_input)
             await runtime.runner.wake_external(run_id)  # pick up a counterparty reply without waiting for the worker
             return await self._fresh(run_id, user)
         return await self.run_view(db, run)
@@ -266,7 +269,7 @@ class AgentsService:
         wanted = APPROVAL_APPROVED if payload.decision == "approve" else APPROVAL_REJECTED
         if approval.status != APPROVAL_PENDING:
             if approval.status == wanted and approval.reviewed_by == user.id:  # a retried request: same answer
-                await db.rollback()
+                await db.commit()  # release the row lock without expiring `approval` / `user` (see provide_input)
                 return {"approval": approval_view(approval), "workflow": await self._fresh_for_approval(approval, user)}
             raise HTTPException(status_code=409, detail=f"This request is already {approval.status}.")
         if approval.expires_at and approval.expires_at < datetime.utcnow():
