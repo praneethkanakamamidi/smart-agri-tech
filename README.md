@@ -241,7 +241,7 @@ order, and its resolution produces refund records; payment rows are never edited
 | Language and framework | Python 3.13 (3.10+ supported), FastAPI 0.115 on Starlette, Pydantic 2, pydantic-settings |
 | Serving | Gunicorn 23 with Uvicorn workers; native WebSockets |
 | Database and persistence | PostgreSQL 16, SQLAlchemy 2.0 (async), asyncpg, psycopg2, psycopg 3 pool, Alembic |
-| Geo and vector | PostGIS 3.4 (geography, GiST radius queries), pgvector (dimension-free embeddings) |
+| Geo and vector | PostGIS 3.6 (geography, GiST radius queries), pgvector (dimension-free embeddings) |
 | AI and agents | LangGraph 1.2 with `langgraph-checkpoint-postgres`; Anthropic Messages API and OpenAI-compatible APIs over plain HTTP (httpx, no provider SDKs); Sentence Transformers (`intfloat/multilingual-e5-small` embeddings, optional mMARCO cross-encoder reranker); Pillow for image preparation |
 | ML | scikit-learn RandomForest, pandas, numpy (crop recommendation) |
 | Optional stores | MongoDB 7 via Motor (OTP store; PostgreSQL also supported), Redis (global agent quotas) |
