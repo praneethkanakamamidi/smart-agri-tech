@@ -195,6 +195,7 @@ class WorkflowRunner:
             row = await db.get(AgentWorkflowRuns, run.id, with_for_update=True)
             row.lease_owner = row.lease_until = None
             row.resume_payload = None
+            row.attempts = 0  # progress was made: max_attempts bounds consecutive failures, not pauses
             row.intent = state.get("intent") or row.intent
             row.current_node = (state.get("visited") or [None])[-1]
             row.updated_at = now

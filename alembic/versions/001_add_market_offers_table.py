@@ -19,7 +19,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    if has_table('market_offers'):  # created earlier from docs/migration_market_offers.sql
+    if has_table('market_offers'):  # created earlier by the original SQL scripts
         return
     op.create_table(
         'market_offers',

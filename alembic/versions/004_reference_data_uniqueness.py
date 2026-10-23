@@ -1,6 +1,6 @@
 """reference data uniqueness: merge duplicate lookup/role/state/district rows and add unique indexes
 
-docs/tables_scripts.txt inserted the Nagaland districts twice and nothing prevented duplicate
+The original SQL schema scripts inserted the Nagaland districts twice and nothing prevented duplicate
 lookup rows. For each duplicate group the oldest row (lowest id) is kept: every foreign key that
 points at a duplicate is repointed to the kept row before the duplicate is deleted, so no user,
 order or profile loses its reference.
