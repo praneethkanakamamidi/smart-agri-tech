@@ -95,6 +95,9 @@ class WorkflowRunner:
                 workflow_type=workflow_type, status=QUEUED, resume_payload={"input": initial}, attempts=0,
                 correlation_id=correlation_id, created_at=now, updated_at=now,
             ))
+            # No relationship() links the two models, so the unit of work doesn't order their
+            # INSERTs; flush the run first or the event's foreign key can fail.
+            await db.flush()
             self._event(db, run_id, "user_message", data={"content": message, "file_count": len(file_ids or [])})
             await db.commit()
         return run_id
