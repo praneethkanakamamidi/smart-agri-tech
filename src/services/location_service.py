@@ -9,7 +9,8 @@ from src.data_models.districts_model import Districts
 class LocationService:
     async def get_states(self, db: AsyncSession):
         try:
-            stmt = select(States).order_by(States.state_name)
+            # "C" collation: the same order on every server, whatever its locale.
+            stmt = select(States).order_by(States.state_name.collate("C"))
             result = await db.execute(stmt)
             states_data = result.scalars().all()
             if not states_data:
@@ -29,7 +30,7 @@ class LocationService:
 
     async def get_districts(self, id: int, db: AsyncSession):
         try:
-            stmt = select(Districts).where(Districts.state_id == id).order_by(Districts.district_name)
+            stmt = select(Districts).where(Districts.state_id == id).order_by(Districts.district_name.collate("C"))
             result = await db.execute(stmt)
             districts_data = result.scalars().all()
             if not districts_data:
