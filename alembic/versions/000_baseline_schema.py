@@ -1,6 +1,6 @@
 """baseline: the original schema, for fresh databases
 
-Databases created earlier from docs/tables_scripts.txt already have these tables; every
+Databases created earlier from the original SQL schema scripts already have these tables; every
 statement is CREATE ... IF NOT EXISTS, so running this on them is a no-op. Reference data is
 not part of migrations; see docs/seeding.md.
 

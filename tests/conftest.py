@@ -9,7 +9,9 @@ Without TEST_DATABASE_URL, database tests are skipped.
 This must run before any `src.*` module is imported, because the engines are built from the
 POSTGRES_* environment variables at import time.
 """
+import asyncio
 import os
+import sys
 import tempfile
 import uuid
 
@@ -30,7 +32,18 @@ os.environ.update({
     "PUSH_PROVIDER": "log",
     "UPLOAD_DIR": os.path.join(tempfile.gettempdir(), "smart-agri-tech-test-uploads"),
     "ADMIN_MFA_REQUIRED": "false",
+    # Agent layer: deterministic rules, no model downloads, no external calls, inline execution.
+    "LLM_PROVIDER": "none",
+    "EMBEDDING_PROVIDER": "hashing",
+    "MAPS_PROVIDER": "offline",
+    "GEOCODER_PROVIDER": "none",
+    "AGENT_WORKER_ENABLED": "false",
+    "AGENT_INLINE_EXECUTION": "true",
 })
+for _name in ("LLM_MODELS_FILE", "LLM_MODELS_JSON", "LLM_TASK_ROUTES_JSON", "REDIS_URL"):
+    os.environ.pop(_name, None)
+if sys.platform == "win32":  # psycopg's async mode (LangGraph checkpoints) needs the selector loop
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 os.environ.setdefault("ACCESS_TOKEN", "test-access-secret-" + uuid.uuid4().hex)
 os.environ.setdefault("REFRESH_TOKEN", "test-refresh-secret-" + uuid.uuid4().hex)
 os.environ.setdefault("ALGORITHM", "HS256")
@@ -64,6 +77,17 @@ def pytest_configure(config):
     from src.seeds.__main__ import main as seed
 
     assert seed([]) == 0, "seeding the e2e database failed"
+
+    from src.agents.checkpointer import Checkpointer
+
+    async def _checkpoint_tables():
+        checkpointer = Checkpointer()
+        try:
+            await checkpointer.setup()
+        finally:
+            await checkpointer.close()
+
+    asyncio.run(_checkpoint_tables())
 
 
 def pytest_unconfigure(config):

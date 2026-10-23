@@ -7,3 +7,6 @@ same domain services the REST API uses (negotiations, order_core, inventory_core
 disputes). Identity comes from the server-side run context, never from model output or graph
 state.
 """
+# Tools import domain services, whose models reference each other by name; every mapper must
+# be registered before the first one is configured, whichever agent module is imported first.
+import src.data_models.registry  # noqa: E402,F401
