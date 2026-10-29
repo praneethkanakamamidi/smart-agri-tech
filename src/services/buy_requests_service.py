@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import date
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, func, or_
@@ -19,6 +19,7 @@ from src.services import inventory_core, order_core
 from src.services.negotiations_service import NegotiationsService, ensure_not_blocked
 from src.services.notifications_service import notify_user
 from src.services.trust_service import ratings_for, completed_counts
+from src.core.clock import utcnow
 
 
 def _name(user):
@@ -75,7 +76,7 @@ class BuyRequestsService:
                 BuyRequestInvites.buy_request_id == buy_request.id, BuyRequestInvites.farmer == farmer_id))).first()
             if exists:
                 continue
-            db.add(BuyRequestInvites(buy_request_id=buy_request.id, farmer=farmer_id, created_at=datetime.utcnow()))
+            db.add(BuyRequestInvites(buy_request_id=buy_request.id, farmer=farmer_id, created_at=utcnow()))
             await notify_user(db, farmer_id, "buy_request_invite",
                               {"party": _name(vendor), "quantity": D(buy_request.quantity_kg), "unit": buy_request.unit,
                                "crop": crop}, ref_type="buy_request", ref_id=buy_request.id)
@@ -92,7 +93,7 @@ class BuyRequestsService:
             raise HTTPException(status_code=422, detail=f"Unknown unit '{payload.unit}'.")
         if payload.needed_by and payload.needed_by < date.today():
             raise HTTPException(status_code=422, detail="needed_by cannot be in the past.")
-        now = datetime.utcnow()
+        now = utcnow()
         buy_request = BuyRequests(
             vendor=vendor.id, crop=payload.crop, quantity_kg=payload.quantity_kg, unit=payload.unit.lower(),
             max_price_per_kg=payload.max_price_per_kg, quality_grade=(payload.quality_grade or "").upper() or None,
@@ -133,14 +134,14 @@ class BuyRequestsService:
         if buy_request.status != "open":
             raise HTTPException(status_code=400, detail=f"Buy request is already {buy_request.status}.")
         buy_request.status = "closed"
-        buy_request.updated_at = datetime.utcnow()
+        buy_request.updated_at = utcnow()
         crop = (await db.execute(select(Crops.crop_name).where(Crops.id == buy_request.crop))).scalar_one_or_none()
         pending = (await db.execute(select(BuyRequestResponses).where(
             BuyRequestResponses.buy_request_id == request_id, BuyRequestResponses.status == "pending"
         ))).scalars().all()
         for response in pending:
             response.status = "rejected"
-            response.updated_at = datetime.utcnow()
+            response.updated_at = utcnow()
             await notify_user(db, response.farmer, "buy_response_rejected", {"crop": crop},
                               ref_type="buy_request", ref_id=request_id)
         await db.commit()
@@ -199,7 +200,7 @@ class BuyRequestsService:
         if not inventory_core.is_listing_live(listing):
             raise HTTPException(status_code=409, detail="The farmer's listing is no longer available.")
         await ensure_not_blocked(db, vendor.id, response.farmer)
-        now = datetime.utcnow()
+        now = utcnow()
         negotiation = Negotiations(listing_id=listing.id, vendor=vendor.id, farmer=response.farmer, status=NEG_OPEN,
                                    source="buy_request", source_ref_id=response.id, created_at=now, updated_at=now)
         db.add(negotiation)
@@ -236,11 +237,11 @@ class BuyRequestsService:
         )
         response.status = "accepted"
         response.order_id = order.id
-        response.updated_at = datetime.utcnow()
+        response.updated_at = utcnow()
         await db.flush()
         if await self._accepted_qty(db, buy_request.id) >= D(buy_request.quantity_kg):
             buy_request.status = "fulfilled"
-            buy_request.updated_at = datetime.utcnow()
+            buy_request.updated_at = utcnow()
         crop = (await db.execute(select(Crops.crop_name).where(Crops.id == buy_request.crop))).scalar_one_or_none()
         await notify_user(db, response.farmer, "buy_response_accepted", {"order_number": order.order_number, "crop": crop},
                           ref_type="order", ref_id=order.id)
@@ -251,7 +252,7 @@ class BuyRequestsService:
     async def reject_response(self, response_id: int, vendor_id: int, db: AsyncSession):
         response = await self._pending_response_for_vendor(response_id, vendor_id, db, ("pending", "negotiating"))
         response.status = "rejected"
-        response.updated_at = datetime.utcnow()
+        response.updated_at = utcnow()
         crop = (await db.execute(select(Crops.crop_name).where(Crops.id == response.buy_request_rel.crop))).scalar_one_or_none()
         await notify_user(db, response.farmer, "buy_response_rejected", {"crop": crop},
                           ref_type="buy_request", ref_id=response.buy_request_id)
@@ -306,7 +307,7 @@ class BuyRequestsService:
             BuyRequestResponses.status.in_(("pending", "negotiating")),
         ))).first():
             raise HTTPException(status_code=409, detail="You already have an active quotation on this buy request.")
-        now = datetime.utcnow()
+        now = utcnow()
         response = BuyRequestResponses(
             buy_request_id=request_id, farmer=farmer_id, farmer_inventory=listing.id,
             price_per_kg=payload.price_per_kg, quantity_kg=payload.quantity_kg, message=payload.message,
@@ -341,7 +342,7 @@ class BuyRequestsService:
         if response.status != "pending":
             raise HTTPException(status_code=400, detail=f"Response is already {response.status}.")
         response.status = "withdrawn"
-        response.updated_at = datetime.utcnow()
+        response.updated_at = utcnow()
         await db.commit()
         return {"success": "Response withdrawn."}
 
@@ -352,6 +353,6 @@ class BuyRequestsService:
         ))).scalars().all()
         for r in rows:
             r.status = "closed"
-            r.updated_at = datetime.utcnow()
+            r.updated_at = utcnow()
         await db.commit()
         return len(rows)

@@ -5,7 +5,7 @@ Asking prices (live listings) and negotiated prices (agreed orders) are always r
 separately, with sample size and time range. Statistics below `min_sample_size` are flagged
 as not reliable. Reference prices are guidance only - they never restrict a negotiation.
 """
-from datetime import datetime, timedelta, date
+from datetime import timedelta, date
 
 from fastapi import HTTPException
 from sqlalchemy import select, func, or_
@@ -21,6 +21,7 @@ from src.data_models.miscellaneous_model import Miscellaneous_Data
 from src.data_models.orders_model import Orders, DEAL_STATUSES
 from src.data_models.users_model import Users
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 DATA_SOURCE = "Smart-Agri-Tech platform records (not an external market feed)"
 
@@ -106,7 +107,7 @@ class InsightsService:
         if not crop:
             raise HTTPException(status_code=404, detail="Crop not found.")
         min_sample = int(await get_setting(db, "min_sample_size"))
-        since = datetime.utcnow() - timedelta(days=days)
+        since = utcnow() - timedelta(days=days)
         filters = dict(state_id=state_id, district_id=district_id, variety=variety, grade=grade, unit=unit)
         deals = await self._deal_stats(db, crop_id, since, **filters)
         asking = await self._asking_stats(db, crop_id, **filters)
@@ -126,7 +127,7 @@ class InsightsService:
 
     async def get_price_trend(self, crop_id: int, db: AsyncSession, state_id=None, district_id=None, weeks: int = 12,
                               grade=None, unit=None):
-        since = datetime.utcnow() - timedelta(weeks=weeks)
+        since = utcnow() - timedelta(weeks=weeks)
         week = func.date_trunc("week", Orders.created_at).label("week")
         price = deal_price()
         stmt = self._deal_stmt((
@@ -149,7 +150,7 @@ class InsightsService:
         listing = (await db.execute(select(FarmerInventory).where(FarmerInventory.id == listing_id))).scalar_one_or_none()
         if not listing or listing.created_by != farmer.id:
             raise HTTPException(status_code=404, detail="Listing not found.")
-        since = datetime.utcnow() - timedelta(days=60)
+        since = utcnow() - timedelta(days=60)
         min_sample = int(await get_setting(db, "min_sample_size"))
         scopes = {}
         for scope, kwargs in (("district", {"district_id": farmer.district}), ("state", {"state_id": farmer.state}),
@@ -178,7 +179,7 @@ class InsightsService:
         }
 
     async def procurement_trend(self, vendor: Users, db: AsyncSession, crop_id: int | None = None, months: int = 6) -> dict:
-        since = datetime.utcnow() - timedelta(days=30 * months)
+        since = utcnow() - timedelta(days=30 * months)
         month = func.date_trunc("month", Orders.created_at).label("month")
         price = deal_price()
         stmt = self._deal_stmt((
@@ -198,12 +199,12 @@ class InsightsService:
 
     async def demand_forecast(self, crop_id: int, db: AsyncSession, weeks_history: int = 12, horizon: int = 4) -> dict:
         """Weighted moving average of weekly agreed volume plus open procurement demand. An estimate, not a promise."""
-        since = datetime.utcnow() - timedelta(weeks=weeks_history)
+        since = utcnow() - timedelta(weeks=weeks_history)
         week = func.date_trunc("week", Orders.created_at).label("week")
         rows = (await db.execute(self._deal_stmt((week, func.sum(Orders.quantity_kg)), crop_id, since)
                                  .group_by(week).order_by(week))).all()
         by_week = {row[0].date(): float(row[1] or 0) for row in rows}
-        start = (datetime.utcnow() - timedelta(weeks=weeks_history)).date()
+        start = (utcnow() - timedelta(weeks=weeks_history)).date()
         start -= timedelta(days=start.weekday())
         history = []
         for i in range(weeks_history):
@@ -233,7 +234,7 @@ class InsightsService:
         """Weekly job: notify interested users when a crop's median deal price moved meaningfully."""
         threshold = D(await get_setting(db, "price_change_alert_percent"))
         min_sample = int(await get_setting(db, "min_sample_size"))
-        now = datetime.utcnow()
+        now = utcnow()
         this_week, last_week = now - timedelta(days=7), now - timedelta(days=14)
         service = InsightsService()
         crops = (await db.execute(select(Crops.id, Crops.crop_name))).all()

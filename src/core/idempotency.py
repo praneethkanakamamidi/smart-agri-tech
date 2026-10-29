@@ -6,7 +6,6 @@ repeating the side effect. A reused key with a different body is rejected.
 """
 import hashlib
 import json
-from datetime import datetime
 from typing import Awaitable, Callable
 
 from fastapi import HTTPException, status
@@ -16,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.data_models.platform_model import IdempotencyKeys
+from src.core.clock import utcnow
 
 
 def _hash(payload) -> str:
@@ -59,7 +59,7 @@ async def run_idempotent(
     try:
         db.add(IdempotencyKeys(
             user_id=user_id, endpoint=endpoint, key=key, request_hash=request_hash,
-            status_code=200, response=jsonable_encoder(result), created_at=datetime.utcnow(),
+            status_code=200, response=jsonable_encoder(result), created_at=utcnow(),
         ))
         await db.commit()
     except IntegrityError:

@@ -1,5 +1,4 @@
 import re
-from datetime import datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, or_, update
@@ -20,6 +19,7 @@ from src.security_utils.hashing_config import Hashing
 from src.services.login_service import normalize_phone, find_user_by_identifier
 from src.services.notifications_service import notify_user
 from src.data_models.notifications_model import SECURITY
+from src.core.clock import utcnow
 
 hashing = Hashing()
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -88,7 +88,7 @@ class UsersService:
             status=await misc_id(db, "status", "inactive"),
             preferred_language=normalize_language(payload.preferred_language),
             verification_status="UNVERIFIED",
-            created_time=datetime.utcnow(),
+            created_time=utcnow(),
         )
         db.add(new_user)
         await db.flush()
@@ -210,7 +210,7 @@ class UsersService:
         new_password = payload.new_password.get_secret_value()
         validate_password(new_password)
         user.password = hashing.get_password_hash(new_password)
-        user.updated_time = datetime.utcnow()
+        user.updated_time = utcnow()
         await self._revoke_all_sessions(user.id, db)
         audit(db, "account.password_reset", "user", user.id, actor_id=user.id)
         await notify_user(db, user.id, "account_status", {"status": "updated", "reason": "Your password was reset."},
@@ -224,11 +224,11 @@ class UsersService:
         new_password = payload.new_password.get_secret_value()
         validate_password(new_password)
         user.password = hashing.get_password_hash(new_password)
-        user.updated_time = datetime.utcnow()
+        user.updated_time = utcnow()
         await db.execute(update(UserSessions).where(
             UserSessions.user_id == user.id, UserSessions.revoked_at.is_(None),
             UserSessions.jti != (getattr(user, "session_id", None) or ""),
-        ).values(revoked_at=datetime.utcnow()))
+        ).values(revoked_at=utcnow()))
         audit(db, "account.password_changed", "user", user.id, actor_id=user.id)
         await notify_user(db, user.id, "account_status", {"status": "updated", "reason": "Your password was changed."},
                           category=SECURITY)
@@ -253,7 +253,7 @@ class UsersService:
         from src.core.platform_settings import get_setting
 
         grace_days = await get_setting(db, "account_deletion_grace_days")
-        user.deletion_requested_at = datetime.utcnow()
+        user.deletion_requested_at = utcnow()
         audit(db, "account.deletion_requested", "user", user.id, actor_id=user.id, after={"reason": payload.reason})
         await db.commit()
         return {
@@ -280,7 +280,7 @@ class UsersService:
         ))).first()
         if existing:
             raise HTTPException(status_code=409, detail="You already have an open appeal.")
-        appeal = AccountAppeals(user_id=user.id, reason=payload.reason, status="open", created_at=datetime.utcnow())
+        appeal = AccountAppeals(user_id=user.id, reason=payload.reason, status="open", created_at=utcnow())
         db.add(appeal)
         audit(db, "account.appeal_submitted", "user", user.id, actor_id=user.id)
         await db.commit()
@@ -450,7 +450,7 @@ class UsersService:
             user_data.last_name = payload.last_name
         if payload.preferred_language:
             user_data.preferred_language = normalize_language(payload.preferred_language)
-        user_data.updated_time = datetime.utcnow()
+        user_data.updated_time = utcnow()
         user_data.updated_by = user_id
         await db.commit()
         return {"success": "Profile has been updated"}
@@ -459,4 +459,4 @@ class UsersService:
     async def _revoke_all_sessions(user_id: int, db: AsyncSession):
         await db.execute(update(UserSessions).where(
             UserSessions.user_id == user_id, UserSessions.revoked_at.is_(None)
-        ).values(revoked_at=datetime.utcnow()))
+        ).values(revoked_at=utcnow()))

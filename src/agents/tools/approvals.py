@@ -5,7 +5,7 @@ The payload is validated with the target tool's own schema before it is stored, 
 executor later refuses to run that tool with anything else. Creation is idempotent per
 (run, step_key), because LangGraph re-runs a node from the top when it resumes.
 """
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Literal
 
 from fastapi import HTTPException
@@ -20,6 +20,7 @@ from src.data_models.agents_model import AgentApprovalRequests, APPROVAL_PENDING
 from src.data_models.roles_model import Roles
 from src.data_models.users_model import Users
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 
 class ApprovalInput(BaseModel):
@@ -62,7 +63,7 @@ async def request_human_approval(db: AsyncSession, actor: Users, args: ApprovalI
     if existing:
         return {**approval_view(existing), "created": False}
 
-    now = datetime.utcnow()
+    now = utcnow()
     row = AgentApprovalRequests(
         run_id=ctx.run_id, step_key=args.step_key, action=args.action,
         requested_for=None if args.requested_for_role else actor.id, requested_for_role=args.requested_for_role,

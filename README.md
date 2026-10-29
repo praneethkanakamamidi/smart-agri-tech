@@ -11,7 +11,7 @@ disputes. It never takes a consequential action without explicit human approval.
 | **Problem** | Smallholder farmers sell through intermediaries and can't see what prices others are getting. Vendors struggle to find, compare and trust suppliers. Deals are negotiated over the phone and paid in cash, with no record of what was agreed |
 | **Solution** | One backend for discovery, versioned negotiation, order lifecycle, payments, logistics, dispute resolution and trust signals, plus an AI agent that does the search and preparation work while people keep the decisions |
 | **Users** | Farmers, vendors (wholesale buyers) and platform admins |
-| **Scale of the codebase** | 276 HTTP routes plus a WebSocket channel · 70 PostgreSQL tables · 7 Alembic migrations · 142 automated tests · 32 routers / 40 services |
+| **Scale of the codebase** | 276 HTTP routes plus a WebSocket channel · 71 PostgreSQL tables · 7 Alembic migrations · 142 automated tests · 32 routers / 40 services |
 | **Stack** | Python 3.13 · FastAPI (async) · SQLAlchemy 2.0 · PostgreSQL 16 + PostGIS + pgvector · LangGraph · Razorpay · Docker · GitHub Actions |
 | **Version** | 2.0.0, containerised and CI-gated (lint, full test suite on PostgreSQL, migration drift check, image builds) |
 
@@ -51,10 +51,11 @@ disputes. It never takes a consequential action without explicit human approval.
 8. [Setup and local development](#setup-and-local-development)
 9. [Configuration reference](#configuration-reference)
 10. [Testing and quality](#testing-and-quality)
-11. [Security and reliability](#security-and-reliability)
-12. [Deployment](#deployment)
-13. [Roadmap](#roadmap)
-14. [Engineering highlights](#engineering-highlights)
+11. [Live API tests](#live-api-tests)
+12. [Security and reliability](#security-and-reliability)
+13. [Deployment](#deployment)
+14. [Roadmap](#roadmap)
+15. [Engineering highlights](#engineering-highlights)
 
 ---
 
@@ -73,7 +74,7 @@ disputes. It never takes a consequential action without explicit human approval.
 | **Disputes and reviews** | Evidence, case thread, escalation, resolutions that create refund records; multi-dimension reviews with moderation |
 | **Procurement and planning** | Vendor buy requests, farmer quotations, comparison, split fulfilment, recurring supply agreements, harvest calendar with pre-harvest listings |
 | **Insights** | Asking prices and negotiated prices reported separately (median, range, sample size, reliability flag); weekly trends; price checks; demand forecast; farmer and vendor dashboards |
-| **AI assistant** (`/api/agents`) | Hybrid supplier and buyer search, offer preparation with rule-computed prices, bounded multi-round negotiation, listing drafts from photos with quality claims checked against the images, order and pickup tracking, dispute investigation reports for admins, voice-note transcription |
+| **AI assistant** (`/api/agents`) | Hybrid supplier and buyer search, offer preparation with rule-computed prices, bounded multi-round negotiation, listing drafts from photos with quality claims checked against the images, order and pickup tracking, dispute investigation (started by either party or an admin; the full report is visible only to admins), voice-note transcription |
 | **Admin** | User moderation, verification and appeal review, audited order adjustments, refunds, settlements, payment reconciliation, versioned platform settings, catalog, announcements, support tickets, audit log search, metrics, manual job runs, agent oversight |
 | **Localisation** | English and Telugu notifications, status labels and catalog names |
 | **ML** | Crop recommendation from soil and weather inputs (scikit-learn RandomForest, `POST /api/predict/`) |
@@ -477,7 +478,7 @@ erDiagram
     FARMER_INVENTORY ||--o| LISTING_EMBEDDINGS : indexed
 ```
 
-The 70 tables fall into these groups: identity and access, profiles and trust, reference data,
+The 71 tables fall into these groups: identity and access, profiles and trust, reference data,
 listings and stock, negotiation, orders and fulfilment, money, communication, disputes and
 support, procurement and planning, platform (settings, audit, idempotency, files), and agents.
 
@@ -636,6 +637,58 @@ request:
 4. Runs `alembic upgrade head && alembic check` on a fresh database (fails on model and
    migration drift).
 5. Builds both Docker images.
+
+---
+
+## Live API tests
+
+Beyond the automated suite, the endpoints below were exercised by hand against a locally
+running API (`localhost:8000`) with seeded data, using PowerShell `Invoke-RestMethod` and
+`websocat`. The assistant ran on the deterministic rules path (`source=rules`) with hashing
+embeddings. Screenshots of each call and its response are in [live-tests/](live-tests/).
+
+> **Note:** these screenshots were taken while testing an earlier version of the API.
+> Development is continuing, so some details differ from the current code: workflow and
+> conversation ids are now UUIDs, approval and report ids are integers, and several response
+> bodies have changed shape. The flows they show are the same.
+
+### Multi-turn agent conversation: from a chat message to a confirmed order
+
+The full procurement flow from [End-to-end flows](#end-to-end-flows), driven over five turns
+in one conversation by a vendor, with the farmer acting from their own account in between.
+
+| Step | Call | Result |
+|---|---|---|
+| Turn 1 | `POST /api/agents/chat` "I need 100 kg of tomato near Hyderabad by Friday" | `completed`, intent `find_supply`; 3 real listings returned, best match listing #27 (grade A, ₹25.00/kg, 400 kg, 8.4 km) |
+| Turn 2 | `POST /api/agents/chat` "Make an offer on listing 27 for 100 kg" (same `conversation_id`) | `awaiting_approval`; `submit_offer` proposed at ₹23.00/kg (₹2,300.00) |
+| Review | `GET /api/agents/approvals/9` | Exact payload and pricing context shown: asking ₹25.00, recent deal median ₹23.40 over 7 deals, "8% under asking, inside the recent negotiated range". Only `unit_price`, `quantity` and `message` are editable |
+| Ownership check | `POST /approvals/9/decision` with the **farmer's** token | `404 not_found`: only the person the approval was requested for can decide it |
+| Turn 3 | `POST /approvals/9/decision` approve with `edits: {unit_price: 24}` | Approved; run moves to `waiting_external` at `await_counterparty` |
+| Farmer acts | `POST /api/negotiations/31/accept` (farmer) | Order `ORD-20261023-000041` created: 100 kg at ₹24.00, total ₹2,400.00, `pending_confirmation` |
+| Turn 4 | `GET /api/agents/workflows/wf_e41b7c09a2` | The paused run woke on the acceptance and now proposes `confirm_order` (approval #10) |
+| Turn 5 | `POST /approvals/10/decision` approve | Workflow `completed` |
+
+![Multi-turn agent conversation](live-tests/tests-live-api-agents-multiturn-conversation-html-2026-10-29-22_38_50.png)
+
+*Tested on a previous version; development is ongoing, so ids and some response fields differ in the current build.*
+
+### Individual endpoints
+
+| Endpoint | Role | What it showed | Screenshot |
+|---|---|---|---|
+| `POST /api/agents/chat` | Vendor | Single-turn discovery with an `Idempotency-Key`; 3 tomato listings, best match first | [view](live-tests/tests-live-api-post-api-agents-chat.png) |
+| `POST /api/agents/discovery/search` | Vendor | Hybrid search: 5 lexical + 7 vector candidates → 4 after hard filters → 2 returned, each with price, quantity, distance and score (0.912, 0.861) | [view](live-tests/tests-live-api-post-api-agents-discovery-search.png) |
+| `POST /api/agents/approvals/{id}/decision` | Vendor | Approval with an edited `unit_price` and a note; workflow moves to `waiting_external` | [view](live-tests/tests-live-api-post-api-agents-approvals-approval-id-decision.png) |
+| `GET /api/agents/workflows/{id}/events` | Vendor | Ordered event trace (user message → supervisor → negotiation → interrupt) and the `submit_offer` tool call tied to its approval id (41 ms) | [view](live-tests/tests-live-api-get-api-agents-workflows-workflow-id-events.png) |
+| `POST /api/agents/listings/from-images` | Farmer | Listing draft from an uploaded photo (grade A, ₹25 asking); `create_listing` paused for approval | [view](live-tests/tests-live-api-post-api-agents-listings-from-images.png) |
+| `POST /api/agents/disputes/{id}/investigate` | – | Investigation report `dr_1`: recommendation `partial_refund`, suggested refund ₹220.00 | [view](live-tests/tests-live-api-post-api-agents-disputes-dispute-id-investigate.png) |
+| `GET /api/assistant/negotiations/{id}/suggest-counter` | Vendor | Counter price ₹23.00 ("midpoint of the last two offers, inside the 30-day market range"), market median ₹24.50 | [view](live-tests/tests-live-api-get-api-assistant-negotiations-negotiation-id-suggest-counter.png) |
+| `GET /api/assistant/admin/summary` | Admin | "4 new users, 3 listings pending moderation, 1 open dispute and 0 failed jobs in the last 24 h" | [view](live-tests/tests-live-api-get-api-assistant-admin-summary.png) |
+| `POST /api/predict/` | Farmer | Crop recommendation from soil and weather inputs: `rice` at 0.94 confidence (alternatives jute 0.04, coconut 0.01) | [view](live-tests/tests-live-api-post-api-predict.png) |
+| `WS /api/ws` | Farmer | An invalid token is closed with code 1008 (policy violation); a valid token gets `pong`, a `notification` event and an `order.status` event | [view](live-tests/tests-live-api-websocket-api-ws.png) |
+
+*All screenshots above are from a previously tested version. Development is ongoing, so the
+current API may return different ids and response fields.*
 
 ---
 

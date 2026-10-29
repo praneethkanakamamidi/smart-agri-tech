@@ -3,7 +3,7 @@ Order creation and lifecycle. Every path that creates an order (accepted negotia
 purchase, procurement quote, recurring supply) goes through `create_order`, and every status
 change goes through `transition`. Callers commit.
 """
-from datetime import datetime, timedelta, date
+from datetime import timedelta, date
 from decimal import Decimal
 
 from fastapi import HTTPException
@@ -27,6 +27,7 @@ from src.data_models.transactions_model import Transactions, Refunds, Settlement
 from src.data_models.users_model import Users, VERIFIED
 from src.services import inventory_core, invoices_service
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 # (from, to) -> parties allowed to make the change ("system" = scheduler / internal flows)
 TRANSITIONS: dict[tuple[str, str], set[str]] = {
@@ -203,7 +204,7 @@ async def create_order(
         advance = money(breakdown["total_payable"] * D(await get_setting(db, "partial_advance_percent")) / 100)
 
     crop = (await db.execute(select(Crops).where(Crops.id == listing.crop))).scalar_one_or_none()
-    now = datetime.utcnow()
+    now = utcnow()
     both_confirmed = vendor_confirmed and farmer_confirmed
     confirmation_hours = int(await get_setting(db, "order_confirmation_hours"))
     order = Orders(
@@ -313,7 +314,7 @@ async def transition(
     if not skip_payment_gate:
         await _check_payment_gate(db, order, to_status)
 
-    now = datetime.utcnow()
+    now = utcnow()
     order.status = await misc_id(db, "order_status", to_status)
     order.updated_at = now
     db.add(OrderStatusHistory(order_id=order.id, from_status=current, to_status=to_status,
@@ -354,7 +355,7 @@ async def confirm(db: AsyncSession, order: Orders, actor_id: int) -> dict:
     if await status_of(db, order) != PENDING_CONFIRMATION:
         raise HTTPException(status_code=409, detail="This order is not awaiting confirmation.")
     party = party_of(order, actor_id)
-    now = datetime.utcnow()
+    now = utcnow()
     if party == "farmer":
         order.farmer_confirmed_at = order.farmer_confirmed_at or now
     else:
@@ -374,7 +375,7 @@ async def cancel(db: AsyncSession, order: Orders, actor_id: int, actor_role: str
     if current in FARMER_DECIDES_CANCEL and party == "vendor":
         order.cancel_requested_by = actor_id
         order.cancel_request_reason = reason[:255]
-        order.cancel_requested_at = datetime.utcnow()
+        order.cancel_requested_at = utcnow()
         await notify_user(db, order.farmer, "order_cancel_requested",
                           {"order_number": order.order_number, "reason": reason, "party": "The vendor"},
                           ref_type="order", ref_id=order.id)
@@ -401,7 +402,7 @@ async def refund_if_paid(db: AsyncSession, order: Orders, actor_id: int | None, 
         Transactions.order_id == order.id, Transactions.status == paid_id
     ).order_by(Transactions.amount_paid.desc()))).scalars().first()
     refund = Refunds(order_id=order.id, transaction_id=txn.id if txn else None, dispute_id=dispute_id, amount=amount,
-                     reason=reason[:255], status="REFUND_PENDING", initiated_by=actor_id, created_at=datetime.utcnow())
+                     reason=reason[:255], status="REFUND_PENDING", initiated_by=actor_id, created_at=utcnow())
     db.add(refund)
     current = await status_of(db, order)
     if (current, REFUND_PENDING) in TRANSITIONS:
@@ -429,5 +430,5 @@ async def _create_settlement(db: AsyncSession, order: Orders):
     db.add(Settlements(
         order_id=order.id, farmer=order.farmer, gross_amount=gross, fee_deducted=fee,
         adjustments=summary["adjustments"] - summary["refunded"], collected_directly=cash_collected,
-        net_amount=net, status="pending" if net > 0 else "paid", created_at=datetime.utcnow(),
+        net_amount=net, status="pending" if net > 0 else "paid", created_at=utcnow(),
     ))

@@ -19,6 +19,7 @@ from src.data_models.farmer_inventory_model import (
 from src.data_models.listing_extras_model import InventoryReservations, InventoryMovements
 from src.data_models.crops_model import Crops
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 SELLABLE_STATUSES = (ACTIVE,)
 
@@ -36,7 +37,7 @@ def _ledger(db, listing: FarmerInventory, movement_type: str, quantity: Decimal,
     db.add(InventoryMovements(
         listing_id=listing.id, movement_type=movement_type, quantity=quantity,
         available_after=listing.weight_kg, reserved_after=listing.reserved_qty, sold_after=listing.sold_qty,
-        ref_type=ref_type, ref_id=ref_id, actor_id=actor_id, note=note, created_at=datetime.utcnow(),
+        ref_type=ref_type, ref_id=ref_id, actor_id=actor_id, note=note, created_at=utcnow(),
     ))
 
 
@@ -93,7 +94,7 @@ async def reserve(
     refresh_status(listing)
     reservation = InventoryReservations(
         listing_id=listing.id, order_id=order_id, quantity=quantity, status="active",
-        expires_at=expires_at, created_at=datetime.utcnow(),
+        expires_at=expires_at, created_at=utcnow(),
     )
     db.add(reservation)
     _ledger(db, listing, "reserve", -quantity, actor_id, "order", order_id)
@@ -119,7 +120,7 @@ async def release(db: AsyncSession, order_id: int, actor_id: int | None, reason:
     listing.weight_kg = D(listing.weight_kg) + D(reservation.quantity)
     refresh_status(listing)
     reservation.status = "expired" if expired else "released"
-    reservation.released_at = datetime.utcnow()
+    reservation.released_at = utcnow()
     reservation.reason = reason[:120]
     _ledger(db, listing, "release", D(reservation.quantity), actor_id, "order", order_id, reason[:255])
 
@@ -141,7 +142,7 @@ async def consume(db: AsyncSession, order_id: int, actor_id: int | None):
     listing.sold_qty = D(listing.sold_qty) + D(reservation.quantity)
     refresh_status(listing)
     reservation.status = "consumed"
-    reservation.released_at = datetime.utcnow()
+    reservation.released_at = utcnow()
     _ledger(db, listing, "sell", D(reservation.quantity), actor_id, "order", order_id)
 
 

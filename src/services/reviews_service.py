@@ -1,4 +1,3 @@
-from datetime import datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, func
@@ -13,6 +12,7 @@ from src.data_models.users_model import Users
 from src.helpers.serializers import model_to_dict
 from src.services.notifications_service import notify_user
 from src.services.trust_service import trust_indicators
+from src.core.clock import utcnow
 
 REVIEWABLE_ORDER_STATUSES = (DELIVERED, COMPLETED)
 
@@ -39,7 +39,7 @@ class ReviewsService:
             order_id=order.id, reviewer=reviewer_id, reviewee=reviewee_id, rating=payload.rating,
             quality_rating=payload.quality_rating, communication_rating=payload.communication_rating,
             reliability_rating=payload.reliability_rating, quantity_accuracy_rating=payload.quantity_accuracy_rating,
-            comment=payload.comment, is_hidden=False, created_at=datetime.utcnow(),
+            comment=payload.comment, is_hidden=False, created_at=utcnow(),
         )
         db.add(review)
         await db.flush()
@@ -54,7 +54,7 @@ class ReviewsService:
         if review.response:
             raise HTTPException(status_code=409, detail="You already replied to this review.")
         review.response = text
-        review.response_at = datetime.utcnow()
+        review.response_at = utcnow()
         user = (await db.execute(select(Users).where(Users.id == user_id))).scalar_one()
         await notify_user(db, review.reviewer, "review_response", {"party": f"{user.first_name} {user.last_name}".strip()},
                           ref_type="review", ref_id=review.id)

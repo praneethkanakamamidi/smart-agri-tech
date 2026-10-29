@@ -28,6 +28,7 @@ from src.data_models.users_model import Users
 from src.helpers.serializers import model_to_dict
 from src.services import inventory_core, order_core
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 
 def _name(user: Users | None) -> str:
@@ -49,7 +50,7 @@ class NegotiationsService:
     async def _expiry(self, db: AsyncSession, hours: int | None) -> datetime:
         default = int(await get_setting(db, "offer_expiry_hours"))
         maximum = int(await get_setting(db, "offer_max_expiry_hours"))
-        return datetime.utcnow() + timedelta(hours=min(hours or default, maximum))
+        return utcnow() + timedelta(hours=min(hours or default, maximum))
 
     async def _get_negotiation(self, db: AsyncSession, negotiation_id: int, user_id: int, lock: bool = False) -> Negotiations:
         stmt = select(Negotiations).where(Negotiations.id == negotiation_id)
@@ -70,7 +71,7 @@ class NegotiationsService:
 
     @staticmethod
     def _check_offer_live(offer: Offers):
-        if offer.status == PENDING and offer.expires_at and offer.expires_at <= datetime.utcnow():
+        if offer.status == PENDING and offer.expires_at and offer.expires_at <= utcnow():
             raise HTTPException(status_code=409, detail="This offer has expired. Send a new offer instead.")
 
     def _validate_terms(self, listing: FarmerInventory, terms, unit_price=None):
@@ -94,7 +95,7 @@ class NegotiationsService:
             subtotal=money(quantity * price), delivery_preference=terms.delivery_preference,
             preferred_date=terms.preferred_date, packaging=terms.packaging, quality_spec=terms.quality_spec,
             message=terms.message, status=status_, supersedes_offer_id=supersedes,
-            expires_at=expires_at, expiry_notified=False, created_at=datetime.utcnow(),
+            expires_at=expires_at, expiry_notified=False, created_at=utcnow(),
         )
 
     async def _announce(self, db: AsyncSession, negotiation: Negotiations, offer: Offers, listing: FarmerInventory,
@@ -110,7 +111,7 @@ class NegotiationsService:
                    + (f". Note: {offer.message}" if offer.message else ""))
         db.add(Messages(sender=offer.offered_by, receiver=offer.recipient, negotiation_id=negotiation.id,
                         listing_id=listing.id, message_type="offer_summary", body=summary[:1000], is_read=False,
-                        created_at=datetime.utcnow()))
+                        created_at=utcnow()))
         queue_event(db, offer.recipient, {"event": "negotiation", "negotiation_id": negotiation.id,
                                           "offer_id": offer.id, "status": offer.status})
 
@@ -123,14 +124,14 @@ class NegotiationsService:
             return
         response.status = "accepted"
         response.order_id = order_id
-        response.updated_at = datetime.utcnow()
+        response.updated_at = utcnow()
         await db.flush()
         request = (await db.execute(select(BuyRequests).where(BuyRequests.id == response.buy_request_id))).scalar_one()
         accepted = D((await db.execute(select(func.coalesce(func.sum(BuyRequestResponses.quantity_kg), 0)).where(
             BuyRequestResponses.buy_request_id == request.id, BuyRequestResponses.status == "accepted"))).scalar())
         if accepted >= D(request.quantity_kg):
             request.status = "fulfilled"
-            request.updated_at = datetime.utcnow()
+            request.updated_at = utcnow()
 
     # ---- actions ---------------------------------------------------------------------
 
@@ -150,7 +151,7 @@ class NegotiationsService:
         if existing:
             raise HTTPException(status_code=409, detail=f"You already have an open negotiation (#{existing}) on this listing. Continue it instead.")
 
-        now = datetime.utcnow()
+        now = utcnow()
         negotiation = Negotiations(listing_id=listing.id, vendor=vendor.id, farmer=listing.created_by,
                                    status=NEG_OPEN, source="listing", created_at=now, updated_at=now)
         db.add(negotiation)
@@ -181,7 +182,7 @@ class NegotiationsService:
         self._validate_terms(listing, offer)
         offer.status = PENDING
         offer.expires_at = await self._expiry(db, payload.expires_in_hours if payload else None)
-        negotiation.updated_at = datetime.utcnow()
+        negotiation.updated_at = utcnow()
         await self._announce(db, negotiation, offer, listing, "offer_received")
         audit(db, "offer.sent", "offer", offer.id, actor_id=user.id)
         await db.commit()
@@ -199,7 +200,7 @@ class NegotiationsService:
         self._validate_terms(listing, payload)
 
         current = await self._current_offer(db, negotiation, lock=True)
-        now = datetime.utcnow()
+        now = utcnow()
         template = "offer_received"
         supersedes = None
         if current and current.status == PENDING and (not current.expires_at or current.expires_at > now):
@@ -250,7 +251,7 @@ class NegotiationsService:
         self._check_offer_live(offer)
 
         listing = await inventory_core.lock_listing(db, negotiation.listing_id)
-        now = datetime.utcnow()
+        now = utcnow()
         order = await order_core.create_order(
             db, listing=listing, vendor_id=negotiation.vendor, quantity=offer.quantity, unit_price=offer.unit_price,
             source="negotiation", accepted_by=user.id, negotiation_id=negotiation.id, offer_id=offer.id,
@@ -288,7 +289,7 @@ class NegotiationsService:
             raise HTTPException(status_code=409, detail="There is no pending offer to reject.")
         if offer.recipient != user.id:
             raise HTTPException(status_code=403, detail="Only the recipient of an offer can reject it.")
-        now = datetime.utcnow()
+        now = utcnow()
         offer.status = REJECTED
         offer.responded_at = now
         negotiation.status = REJECTED
@@ -310,8 +311,8 @@ class NegotiationsService:
             raise HTTPException(status_code=409, detail="You have no pending offer to withdraw.")
         was_draft = offer.status == DRAFT
         offer.status = WITHDRAWN
-        offer.responded_at = datetime.utcnow()
-        negotiation.updated_at = datetime.utcnow()
+        offer.responded_at = utcnow()
+        negotiation.updated_at = utcnow()
         if not was_draft:
             listing = (await db.execute(select(FarmerInventory).where(FarmerInventory.id == negotiation.listing_id))).scalar_one()
             await notify_user(db, offer.recipient, "offer_withdrawn",
@@ -326,7 +327,7 @@ class NegotiationsService:
         if negotiation.status not in (NEG_OPEN, EXPIRED):
             raise HTTPException(status_code=409, detail=f"This negotiation is already {negotiation.status.lower()}.")
         offer = await self._current_offer(db, negotiation, lock=True)
-        now = datetime.utcnow()
+        now = utcnow()
         if offer and offer.status in (PENDING, DRAFT):
             offer.status = CANCELLED
             offer.responded_at = now
@@ -350,7 +351,7 @@ class NegotiationsService:
         data = model_to_dict(offer)
         data["is_actionable_by_me"] = (
             offer.status == PENDING and offer.recipient == viewer_id
-            and (not offer.expires_at or offer.expires_at > datetime.utcnow())
+            and (not offer.expires_at or offer.expires_at > utcnow())
         )
         data["is_mine"] = offer.offered_by == viewer_id
         if floor is not None:  # only passed for the farmer
@@ -441,7 +442,7 @@ class NegotiationsService:
 
     @staticmethod
     async def expire_due(db: AsyncSession) -> int:
-        now = datetime.utcnow()
+        now = utcnow()
         offers = (await db.execute(
             select(Offers).where(Offers.status == PENDING, Offers.expires_at <= now)
             .with_for_update(skip_locked=True).limit(200)
@@ -464,7 +465,7 @@ class NegotiationsService:
     @staticmethod
     async def warn_expiring(db: AsyncSession) -> int:
         hours = int(await get_setting(db, "offer_expiry_warning_hours"))
-        now = datetime.utcnow()
+        now = utcnow()
         offers = (await db.execute(
             select(Offers).where(
                 Offers.status == PENDING, Offers.expiry_notified.is_(False),

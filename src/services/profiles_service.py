@@ -1,4 +1,3 @@
-from datetime import datetime
 
 from fastapi import HTTPException
 from sqlalchemy import select, func
@@ -13,6 +12,7 @@ from src.helpers.serializers import model_to_dict
 from src.security_utils.role_guard import get_role_name, FARMER, VENDOR
 from src.services.files_service import FilesService
 from src.services.trust_service import trust_indicators
+from src.core.clock import utcnow
 
 FARMER_PLAIN_FIELDS = (
     "farm_name", "farm_address", "village", "pincode", "state", "district", "produce_categories",
@@ -73,7 +73,7 @@ class ProfilesService:
         if await get_role_name(user, db) != FARMER:
             raise HTTPException(status_code=403, detail="Only farmers have a farmer profile.")
         profile = (await db.execute(select(FarmerProfiles).where(FarmerProfiles.user_id == user.id))).scalar_one_or_none()
-        now = datetime.utcnow()
+        now = utcnow()
         if not profile:
             profile = FarmerProfiles(user_id=user.id, created_at=now)
             db.add(profile)
@@ -101,7 +101,7 @@ class ProfilesService:
         if await get_role_name(user, db) != VENDOR:
             raise HTTPException(status_code=403, detail="Only vendors have a vendor profile.")
         profile = (await db.execute(select(VendorProfiles).where(VendorProfiles.user_id == user.id))).scalar_one_or_none()
-        now = datetime.utcnow()
+        now = utcnow()
         if not profile:
             profile = VendorProfiles(user_id=user.id, created_at=now)
             db.add(profile)
@@ -142,7 +142,7 @@ class ProfilesService:
             document_number_masked=mask(payload.document_number) if payload.document_number else None,
             file_ids=file_ids,
             status=PENDING_VERIFICATION,
-            submitted_at=datetime.utcnow(),
+            submitted_at=utcnow(),
         )
         db.add(request)
         if user.verification_status != VERIFIED:

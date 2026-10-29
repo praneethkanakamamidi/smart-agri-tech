@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -16,6 +16,7 @@ from src.helpers.serializers import model_to_dict
 from src.services import order_core
 from src.services.files_service import FilesService
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 DELIVERY_CODE_DAYS = 7
 
@@ -27,7 +28,7 @@ class LogisticsService:
         )).scalar_one_or_none()
         if not shipment:
             shipment = Shipments(order_id=order.id, mode=order.fulfillment_mode or PICKUP, status="planned",
-                                 reschedule_count=0, created_at=datetime.utcnow())
+                                 reschedule_count=0, created_at=utcnow())
             db.add(shipment)
             await db.flush()
         return shipment
@@ -46,7 +47,7 @@ class LogisticsService:
             return
         code = generate_code()
         shipment.delivery_otp_hash = hash_secret(f"delivery:{order.id}:{code}")
-        shipment.delivery_otp_expires_at = datetime.utcnow() + timedelta(days=DELIVERY_CODE_DAYS)
+        shipment.delivery_otp_expires_at = utcnow() + timedelta(days=DELIVERY_CODE_DAYS)
         await notify_user(db, order.vendor, "delivery_code", {"code": code, "order_number": order.order_number},
                           ref_type="order", ref_id=order.id, category="security")
 
@@ -75,7 +76,7 @@ class LogisticsService:
             setattr(shipment, field, value)
         if rescheduled:
             shipment.reschedule_count += 1
-        shipment.updated_at = datetime.utcnow()
+        shipment.updated_at = utcnow()
         other = order.vendor if party == "farmer" else order.farmer
         if "pickup_date" in fields and shipment.pickup_date:
             await notify_user(db, other, "pickup_scheduled",
@@ -94,7 +95,7 @@ class LogisticsService:
             shipment.pickup_proof_file_id = payload.proof_file_id
         await order_core.transition(db, order, IN_TRANSIT, user.id, note=payload.note or "dispatched")
         shipment.status = "in_transit"
-        shipment.dispatched_at = datetime.utcnow()
+        shipment.dispatched_at = utcnow()
         shipment.transporter_name = payload.transporter_name or shipment.transporter_name
         shipment.vehicle_number = payload.vehicle_number or shipment.vehicle_number
         if not shipment.delivery_otp_hash:
@@ -113,7 +114,7 @@ class LogisticsService:
         if party == "farmer":
             if not payload.delivery_code:
                 raise HTTPException(status_code=422, detail="Enter the delivery code the vendor received.")
-            if not shipment.delivery_otp_hash or (shipment.delivery_otp_expires_at and shipment.delivery_otp_expires_at < datetime.utcnow()):
+            if not shipment.delivery_otp_hash or (shipment.delivery_otp_expires_at and shipment.delivery_otp_expires_at < utcnow()):
                 raise HTTPException(status_code=409, detail="The delivery code has expired; ask the vendor to confirm receipt.")
             if not verify_secret(f"delivery:{order.id}:{payload.delivery_code}", shipment.delivery_otp_hash):
                 raise HTTPException(status_code=400, detail="Incorrect delivery code.")
@@ -123,7 +124,7 @@ class LogisticsService:
         if payload.accepted_quantity is not None and D(payload.accepted_quantity) > D(order.quantity_kg):
             raise HTTPException(status_code=422, detail="Accepted quantity can't exceed the ordered quantity.")
         await order_core.transition(db, order, DELIVERED, user.id, note=payload.notes or "delivered")
-        now = datetime.utcnow()
+        now = utcnow()
         shipment.status = "delivered"
         shipment.delivered_at = now
         shipment.receiver_name = payload.receiver_name
@@ -146,7 +147,7 @@ class LogisticsService:
         await order_core.transition(db, order, DELIVERY_FAILED, user.id, note=payload.reason)
         shipment.status = "failed"
         shipment.failure_reason = payload.reason
-        shipment.updated_at = datetime.utcnow()
+        shipment.updated_at = utcnow()
         await db.commit()
         return self._view(shipment)
 
@@ -161,7 +162,7 @@ class LogisticsService:
         shipment.window_end = payload.window_end
         shipment.reschedule_count += 1
         shipment.status = "planned" if target == READY_FOR_PICKUP else "in_transit"
-        shipment.updated_at = datetime.utcnow()
+        shipment.updated_at = utcnow()
         await self.issue_delivery_code(db, order)
         await notify_user(db, order.vendor, "pickup_scheduled",
                           {"order_number": order.order_number, "date": payload.pickup_date.isoformat()},

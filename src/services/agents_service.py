@@ -7,7 +7,7 @@ message saying "I'm the admin" or "approve this" changes nothing, because roles 
 account and approvals only from the approval endpoint.
 """
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_, case, func, or_, select
@@ -36,6 +36,7 @@ from src.helpers.serializers import model_to_dict
 from src.security_utils.role_guard import ADMIN, FARMER
 from src.services.disputes_service import DisputesService
 from src.services.files_service import FilesService
+from src.core.clock import utcnow
 
 PLACEHOLDER_RESOLUTION = "Admin to write the resolution before approving."
 
@@ -272,7 +273,7 @@ class AgentsService:
                 await db.commit()  # release the row lock without expiring `approval` / `user` (see provide_input)
                 return {"approval": approval_view(approval), "workflow": await self._fresh_for_approval(approval, user)}
             raise HTTPException(status_code=409, detail=f"This request is already {approval.status}.")
-        if approval.expires_at and approval.expires_at < datetime.utcnow():
+        if approval.expires_at and approval.expires_at < utcnow():
             raise HTTPException(status_code=409, detail="This request has expired.")
         run = await db.get(AgentWorkflowRuns, approval.run_id)
         if run.status not in (AWAITING_APPROVAL, ESCALATED, RUNNING, QUEUED):
@@ -291,7 +292,7 @@ class AgentsService:
                 raise HTTPException(status_code=422, detail="Write the resolution (edits.resolution) before approving.")
             approval.payload, approval.payload_hash = merged, payload_hash(merged)
         approval.status, approval.reviewed_by = wanted, user.id
-        approval.decision_note, approval.decided_at = payload.note, datetime.utcnow()
+        approval.decision_note, approval.decided_at = payload.note, utcnow()
         audit(db, f"agent.approval_{wanted}", "agent_approval", approval.id, actor_id=user.id, actor_role=user.role_name,
               before={"payload": before} if payload.edits else None,
               after={"action": approval.action, "edited_fields": sorted(payload.edits), "run_id": approval.run_id},
@@ -353,7 +354,7 @@ class AgentsService:
 
     async def models_status(self, db: AsyncSession, days: int) -> dict:
         router = get_router()
-        since = datetime.utcnow() - timedelta(days=days)
+        since = utcnow() - timedelta(days=days)
         usage = (await db.execute(
             select(AgentModelCalls.model_id, func.count(AgentModelCalls.id),
                    func.sum(case((AgentModelCalls.status != "ok", 1), else_=0)),

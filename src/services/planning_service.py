@@ -1,5 +1,5 @@
 """Harvest planning (farmers) and recurring supply agreements (vendor proposes, farmer approves)."""
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -17,6 +17,7 @@ from src.schemas.listings_schema import ListingCreateSchema
 from src.services import inventory_core, order_core
 from src.services.listings_service import ListingsService
 from src.services.notifications_service import notify_user
+from src.core.clock import utcnow
 
 FREQUENCY_DAYS = {"weekly": 7, "biweekly": 14, "monthly": 30}
 
@@ -31,7 +32,7 @@ class PlanningService:
     async def create_plan(self, farmer: Users, payload, db: AsyncSession) -> dict:
         if not (await db.execute(select(Crops.id).where(Crops.id == payload.crop))).first():
             raise HTTPException(status_code=404, detail="Crop not found.")
-        now = datetime.utcnow()
+        now = utcnow()
         plan = HarvestPlans(farmer=farmer.id, status="planned", created_at=now, updated_at=now,
                             **payload.model_dump(exclude={"expected_quantity", "area_acres"}),
                             expected_quantity=D(payload.expected_quantity),
@@ -50,7 +51,7 @@ class PlanningService:
         plan = await self._owned_plan(db, plan_id, farmer.id)
         for key, value in payload.model_dump(exclude_unset=True).items():
             setattr(plan, key, D(value) if key in ("expected_quantity", "area_acres") and value is not None else value)
-        plan.updated_at = datetime.utcnow()
+        plan.updated_at = utcnow()
         await db.commit()
         return model_to_dict(plan)
 
@@ -81,7 +82,7 @@ class PlanningService:
         )
         result = await ListingsService().create(farmer, listing_payload, db)
         plan.listing_id = result["id"]
-        plan.updated_at = datetime.utcnow()
+        plan.updated_at = utcnow()
         await db.commit()
         return {**result, "success": "Published as a pre-harvest listing.", "plan_id": plan.id}
 
@@ -93,7 +94,7 @@ class PlanningService:
             raise HTTPException(status_code=404, detail="Listing not found.")
         if payload.start_date < date.today():
             raise HTTPException(status_code=422, detail="start_date cannot be in the past.")
-        now = datetime.utcnow()
+        now = utcnow()
         recurring = RecurringOrders(
             vendor=vendor.id, farmer=listing.created_by, listing_id=listing.id, quantity=D(payload.quantity),
             unit_price=D(payload.unit_price), frequency=payload.frequency, next_run_date=payload.start_date,
@@ -135,7 +136,7 @@ class PlanningService:
         if not rule or not rule[1]:
             raise HTTPException(status_code=409, detail=f"You can't {action} a {r.status} recurring supply.")
         r.status = rule[0]
-        r.updated_at = datetime.utcnow()
+        r.updated_at = utcnow()
         if action == "approve":
             r.approved_at = r.updated_at
         other = r.vendor if is_farmer else r.farmer
@@ -175,6 +176,6 @@ class PlanningService:
                                       ref_type="recurring_order", ref_id=r.id,
                                       dedupe_key=f"recurring_skipped:{r.id}:{r.next_run_date}")
             r.next_run_date = r.next_run_date + timedelta(days=FREQUENCY_DAYS[r.frequency])
-            r.updated_at = datetime.utcnow()
+            r.updated_at = utcnow()
         await db.commit()
         return created

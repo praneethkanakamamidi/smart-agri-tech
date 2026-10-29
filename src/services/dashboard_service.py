@@ -2,7 +2,6 @@
 Home-screen summaries. Booked order value, realised (completed) sales and cash actually
 received are reported separately and never mixed.
 """
-from datetime import datetime
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +25,7 @@ from src.data_models.transactions_model import Transactions, Settlements
 from src.data_models.users_model import Users
 from src.services import order_core
 from src.services.reviews_service import ReviewsService
+from src.core.clock import utcnow
 
 NOT_BOOKED = (CANCELLED, REFUNDED, REFUND_PENDING, PENDING_CONFIRMATION)
 
@@ -101,7 +101,7 @@ class DashboardService:
         }
 
     async def _negotiation_counts(self, db, user_id, role_column) -> dict:
-        now = datetime.utcnow()
+        now = utcnow()
         base = (select(func.count(Negotiations.id))
                 .join(Offers, Offers.id == Negotiations.current_offer_id, isouter=True)
                 .where(role_column == user_id))
@@ -117,7 +117,7 @@ class DashboardService:
         }
 
     async def farmer_dashboard(self, farmer_id: int, db: AsyncSession):
-        month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_start = utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         listings = (await db.execute(
             select(func.count(FarmerInventory.id), func.coalesce(func.sum(FarmerInventory.weight_kg), 0),
                    func.coalesce(func.sum(FarmerInventory.reserved_qty), 0))
@@ -162,7 +162,7 @@ class DashboardService:
         return dashboard
 
     async def vendor_dashboard(self, vendor_id: int, db: AsyncSession):
-        month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_start = utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         by_status = await self._orders_by_status(db, Orders.vendor, vendor_id)
         recent = (await db.execute(
             select(Orders).where(Orders.vendor == vendor_id).order_by(Orders.created_at.desc()).limit(5)

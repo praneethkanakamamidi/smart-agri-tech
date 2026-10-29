@@ -21,6 +21,7 @@ from src.helpers.settings_config import OAuthSettings
 from src.db_connections.database import get_db_async
 from src.security_utils.oauth_config import OAuth2Handler
 from src.services.permissions_service import PermissionsService
+from src.core.clock import utcnow
 
 
 hashing = Hashing()
@@ -78,7 +79,7 @@ class LoginService(OAuth2Handler):
 
     async def _issue_session(self, user: Users, db: AsyncSession, request: Request | None) -> dict:
         jti = secrets.token_hex(16)
-        now = datetime.utcnow()
+        now = utcnow()
         db.add(UserSessions(
             user_id=user.id,
             jti=jti,
@@ -194,11 +195,11 @@ class LoginService(OAuth2Handler):
                 # Reuse of a rotated/revoked refresh token: revoke every session (possible token theft).
                 await db.execute(update(UserSessions).where(
                     UserSessions.user_id == user_data.id, UserSessions.revoked_at.is_(None)
-                ).values(revoked_at=datetime.utcnow()))
+                ).values(revoked_at=utcnow()))
                 audit(db, "auth.refresh_reuse_detected", "user", user_data.id, actor_id=user_data.id)
                 await db.commit()
                 raise HTTPException(status_code=401, detail="Session is no longer valid. Please log in again.")
-            session.revoked_at = datetime.utcnow()
+            session.revoked_at = utcnow()
 
         tokens = await self._issue_session(user_data, db, request)
         await db.commit()
@@ -212,7 +213,7 @@ class LoginService(OAuth2Handler):
             if not session_id:
                 return {"success": "Logged out."}
             stmt = stmt.where(UserSessions.jti == session_id)
-        await db.execute(stmt.values(revoked_at=datetime.utcnow()))
+        await db.execute(stmt.values(revoked_at=utcnow()))
         audit(db, "auth.logout_all" if all_devices else "auth.logout", "user", user.id, actor_id=user.id)
         await db.commit()
         return {"success": "Logged out from all devices." if all_devices else "Logged out."}
@@ -221,7 +222,7 @@ class LoginService(OAuth2Handler):
         rows = (await db.execute(
             select(UserSessions)
             .where(UserSessions.user_id == user.id, UserSessions.revoked_at.is_(None),
-                   UserSessions.expires_at > datetime.utcnow())
+                   UserSessions.expires_at > utcnow())
             .order_by(UserSessions.last_used_at.desc())
         )).scalars().all()
         return [
@@ -244,7 +245,7 @@ class LoginService(OAuth2Handler):
         ))).scalar_one_or_none()
         if not session:
             raise HTTPException(status_code=404, detail="Session not found.")
-        session.revoked_at = datetime.utcnow()
+        session.revoked_at = utcnow()
         audit(db, "auth.session_revoked", "user_session", session.id, actor_id=user.id)
         await db.commit()
         return {"success": "Session revoked."}
@@ -316,7 +317,7 @@ class LoginService(OAuth2Handler):
                     detail="Authentication failed: Session has been logged out.",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            now = datetime.utcnow()
+            now = utcnow()
             if not session.last_used_at or (now - session.last_used_at) > timedelta(minutes=5):
                 session.last_used_at = now
                 await db.commit()

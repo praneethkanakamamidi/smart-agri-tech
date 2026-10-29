@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import date
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, func, delete, update
@@ -25,6 +25,7 @@ from src.services.files_service import FilesService
 from src.services.listing_views import listing_dict, images_for, tiers_for, certifications_for
 from src.services.notifications_service import notify_user
 from src.services.trust_service import trust_indicators
+from src.core.clock import utcnow
 
 EDITABLE_STATUSES = (DRAFT, ACTIVE, PAUSED, RESERVED, SOLD, EXPIRED)
 
@@ -85,7 +86,7 @@ class ListingsService:
         if count + len(file_ids) > 10:
             raise HTTPException(status_code=422, detail="A listing can have at most 10 photos.")
         for offset, file_id in enumerate(file_ids):
-            db.add(ListingImages(listing_id=listing_id, file_id=file_id, sort_order=count + offset, created_at=datetime.utcnow()))
+            db.add(ListingImages(listing_id=listing_id, file_id=file_id, sort_order=count + offset, created_at=utcnow()))
 
     # ---- interested-vendor notifications ------------------------------------
 
@@ -142,7 +143,7 @@ class ListingsService:
         if payload.publish and payload.quantity <= 0:
             raise HTTPException(status_code=422, detail="Quantity must be positive to publish a listing.")
 
-        now = datetime.utcnow()
+        now = utcnow()
         listing = FarmerInventory(
             crop=payload.crop, fertilizer=payload.fertilizer, soil=payload.soil,
             variety=payload.variety, weight_kg=D(payload.quantity), unit=unit,
@@ -216,7 +217,7 @@ class ListingsService:
             inventory_core.refresh_status(listing)
 
         listing.updated_by = farmer.id
-        listing.updated_at = datetime.utcnow()
+        listing.updated_at = utcnow()
         if payload.asking_price is not None and D(old_price) != D(payload.asking_price):
             await self._notify_price_change(db, listing, old_price)
         audit(db, "listing.updated", "listing", listing.id, actor_id=farmer.id, actor_role="farmer", before=before,
@@ -227,7 +228,7 @@ class ListingsService:
     async def set_stock(self, farmer: Users, listing_id: int, quantity: float, note: str | None, db: AsyncSession) -> dict:
         listing = await self._get_owned(db, listing_id, farmer.id, lock=True)
         await inventory_core.set_available(db, listing, quantity, farmer.id, note or "stock update")
-        listing.updated_at = datetime.utcnow()
+        listing.updated_at = utcnow()
         await db.commit()
         return {"success": "Stock updated.", "available": listing.weight_kg, "reserved": listing.reserved_qty,
                 "sold": listing.sold_qty, "status": listing.status}
@@ -252,14 +253,14 @@ class ListingsService:
             listing.status = PAUSED
         else:
             raise HTTPException(status_code=422, detail="Unknown action.")
-        listing.updated_at = datetime.utcnow()
+        listing.updated_at = utcnow()
         audit(db, f"listing.{action}", "listing", listing.id, actor_id=farmer.id, actor_role="farmer")
         await db.commit()
         return {"success": f"Listing {listing.status}.", "status": listing.status}
 
     async def duplicate(self, farmer: Users, listing_id: int, db: AsyncSession) -> dict:
         source = await self._get_owned(db, listing_id, farmer.id)
-        now = datetime.utcnow()
+        now = utcnow()
         copy = FarmerInventory(
             crop=source.crop, fertilizer=source.fertilizer, soil=source.soil, variety=source.variety,
             weight_kg=D(0), unit=source.unit, proposed_cost=source.proposed_cost, min_order_qty=source.min_order_qty,
@@ -283,7 +284,7 @@ class ListingsService:
             raise HTTPException(status_code=409, detail="This listing has stock reserved for active orders. Pause it instead.")
         has_history = (await db.execute(select(Orders.id).where(Orders.farmer_inventory == listing.id))).first() or \
             (await db.execute(select(Negotiations.id).where(Negotiations.listing_id == listing.id))).first()
-        now = datetime.utcnow()
+        now = utcnow()
         listing.status = ARCHIVED
         listing.deleted_at = now
         listing.updated_at = now
@@ -330,7 +331,7 @@ class ListingsService:
         await FilesService.require_owned(db, [payload.file_id], farmer.id, {"certification"})
         cert = ListingCertifications(
             listing_id=listing_id, cert_type=payload.cert_type, issuer=payload.issuer, file_id=payload.file_id,
-            valid_until=payload.valid_until, status="pending", created_at=datetime.utcnow(),
+            valid_until=payload.valid_until, status="pending", created_at=utcnow(),
         )
         db.add(cert)
         await db.commit()
@@ -434,7 +435,7 @@ class ListingsService:
         ))).first()
         if not exists:
             db.add(SavedListings(user_id=user.id, listing_id=listing_id, saved_price=listing.proposed_cost,
-                                 created_at=datetime.utcnow()))
+                                 created_at=utcnow()))
             await db.commit()
         return {"success": "Listing saved. You'll be notified if its price changes."}
 

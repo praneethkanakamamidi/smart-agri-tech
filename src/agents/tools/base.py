@@ -21,7 +21,6 @@ import hashlib
 import json
 import time
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any, Awaitable, Callable
 
 from fastapi import HTTPException
@@ -44,6 +43,7 @@ from src.data_models.users_model import Users
 from src.db_connections.database import AsyncSessionLocal
 from src.helpers.logging_config import get_logger
 from src.security_utils.role_guard import get_role_name
+from src.core.clock import utcnow
 
 logger = get_logger("agents.tools")
 
@@ -134,7 +134,7 @@ class ToolExecutor:
                     status=status, idempotency_key=key if status != TOOL_SUCCEEDED else None, args=redact(args),
                     result=_summary(result) if result is not None else None,
                     error_code=error.code if error else None, error_message=error.message[:255] if error else None,
-                    latency_ms=int((time.perf_counter() - started) * 1000), created_at=datetime.utcnow(),
+                    latency_ms=int((time.perf_counter() - started) * 1000), created_at=utcnow(),
                 ))
                 await db.commit()
         except Exception as e:  # recording must never mask the original outcome
@@ -213,7 +213,7 @@ class ToolExecutor:
                     record = AgentToolCalls(
                         run_id=ctx.run_id, user_id=actor.id, approval_id=approval_ref, node=ctx.node, tool=name,
                         kind=kind, status=TOOL_SUCCEEDED, idempotency_key=key, args=redact(raw_args),
-                        created_at=datetime.utcnow(),
+                        created_at=utcnow(),
                     )
                     db.add(record)
                     audit(db, f"agent.{name}", "agent_run", ctx.run_id, actor_id=actor.id, actor_role=actor.role_name,
@@ -224,7 +224,7 @@ class ToolExecutor:
                 if record is None:
                     record = AgentToolCalls(
                         run_id=ctx.run_id, user_id=actor.id, approval_id=approval_ref, node=ctx.node, tool=name,
-                        kind=kind, status=TOOL_SUCCEEDED, args=redact(raw_args), created_at=datetime.utcnow(),
+                        kind=kind, status=TOOL_SUCCEEDED, args=redact(raw_args), created_at=utcnow(),
                     )
                     db.add(record)
                 record.result = _summary(result)

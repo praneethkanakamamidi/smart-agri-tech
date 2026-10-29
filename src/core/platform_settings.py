@@ -1,5 +1,4 @@
 """Admin-configurable marketplace settings with versioned history."""
-from datetime import datetime
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -7,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.data_models.platform_model import PlatformSettings, PlatformSettingsHistory
+from src.core.clock import utcnow
 
 DEFAULT_SETTINGS: dict[str, dict[str, Any]] = {
     "offer_expiry_hours": {"value": 48, "description": "Default validity of an offer, in hours."},
@@ -79,7 +79,7 @@ async def update_setting(db: AsyncSession, key: str, value: Any, actor_id: int, 
     row = (await db.execute(
         select(PlatformSettings).where(PlatformSettings.key == key).with_for_update()
     )).scalar_one_or_none()
-    now = datetime.utcnow()
+    now = utcnow()
     before = row.value if row else default
     if row:
         row.value = value

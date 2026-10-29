@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, date
+from datetime import date
 
 from src.data_models.favourites_model import FavouriteFarmers
 from src.data_models.farmer_inventory_model import FarmerInventory
@@ -11,6 +11,7 @@ from src.data_models.reviews_model import Reviews
 from src.security_utils.role_guard import get_role_name, FARMER
 from src.data_models.farmer_inventory_model import ACTIVE
 from src.services.listing_views import listing_dict
+from src.core.clock import utcnow
 
 
 class FavouritesService:
@@ -32,7 +33,7 @@ class FavouritesService:
                     status_code=status.HTTP_409_CONFLICT, detail="Farmer is already in your favourites."
                 )
 
-            db.add(FavouriteFarmers(vendor=vendor_id, farmer=farmer_id, created_at=datetime.utcnow()))
+            db.add(FavouriteFarmers(vendor=vendor_id, farmer=farmer_id, created_at=utcnow()))
             await db.commit()
             return {"success": "Farmer added to favourites."}
         except HTTPException:
