@@ -668,9 +668,13 @@ in one conversation by a vendor, with the farmer acting from their own account i
 | Turn 4 | `GET /api/agents/workflows/wf_e41b7c09a2` | The paused run woke on the acceptance and now proposes `confirm_order` (approval #10) |
 | Turn 5 | `POST /approvals/10/decision` approve | Workflow `completed` |
 
+#### Screenshot: multi-turn agent conversation (vendor and farmer)
+
 ![Multi-turn agent conversation](live-tests/tests-live-api-agents-multiturn-conversation-html-2026-10-29-22_38_50.png)
 
 *Tested on a previous version; development is ongoing, so ids and some response fields differ in the current build.*
+
+<br>
 
 ### Individual endpoints
 
@@ -686,6 +690,68 @@ in one conversation by a vendor, with the farmer acting from their own account i
 | `GET /api/assistant/admin/summary` | Admin | "4 new users, 3 listings pending moderation, 1 open dispute and 0 failed jobs in the last 24 h" | [view](live-tests/tests-live-api-get-api-assistant-admin-summary.png) |
 | `POST /api/predict/` | Farmer | Crop recommendation from soil and weather inputs: `rice` at 0.94 confidence (alternatives jute 0.04, coconut 0.01) | [view](live-tests/tests-live-api-post-api-predict.png) |
 | `WS /api/ws` | Farmer | An invalid token is closed with code 1008 (policy violation); a valid token gets `pong`, a `notification` event and an `order.status` event | [view](live-tests/tests-live-api-websocket-api-ws.png) |
+
+<br>
+
+#### 1. Agent chat: `POST /api/agents/chat`
+
+![Agent chat](live-tests/tests-live-api-post-api-agents-chat.png)
+
+<br>
+
+#### 2. Hybrid supplier search: `POST /api/agents/discovery/search`
+
+![Hybrid supplier search](live-tests/tests-live-api-post-api-agents-discovery-search.png)
+
+<br>
+
+#### 3. Approval decision: `POST /api/agents/approvals/{id}/decision`
+
+![Approval decision](live-tests/tests-live-api-post-api-agents-approvals-approval-id-decision.png)
+
+<br>
+
+#### 4. Workflow event trace: `GET /api/agents/workflows/{id}/events`
+
+![Workflow event trace](live-tests/tests-live-api-get-api-agents-workflows-workflow-id-events.png)
+
+<br>
+
+#### 5. Listing from photos: `POST /api/agents/listings/from-images`
+
+![Listing from photos](live-tests/tests-live-api-post-api-agents-listings-from-images.png)
+
+<br>
+
+#### 6. Dispute investigation: `POST /api/agents/disputes/{id}/investigate`
+
+![Dispute investigation](live-tests/tests-live-api-post-api-agents-disputes-dispute-id-investigate.png)
+
+<br>
+
+#### 7. Counteroffer suggestion: `GET /api/assistant/negotiations/{id}/suggest-counter`
+
+![Counteroffer suggestion](live-tests/tests-live-api-get-api-assistant-negotiations-negotiation-id-suggest-counter.png)
+
+<br>
+
+#### 8. Admin summary: `GET /api/assistant/admin/summary`
+
+![Admin summary](live-tests/tests-live-api-get-api-assistant-admin-summary.png)
+
+<br>
+
+#### 9. Crop recommendation: `POST /api/predict/`
+
+![Crop recommendation](live-tests/tests-live-api-post-api-predict.png)
+
+<br>
+
+#### 10. Real-time WebSocket: `WS /api/ws`
+
+![Real-time WebSocket](live-tests/tests-live-api-websocket-api-ws.png)
+
+<br>
 
 *All screenshots above are from a previously tested version. Development is ongoing, so the
 current API may return different ids and response fields.*
